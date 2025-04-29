@@ -8,8 +8,6 @@
 
 Isothermal-JS is a lightweight, browser-based game creation toolkit that lets you build 2D games with pure JavaScript - no compiling required! It's designed to be easy to learn while still providing powerful features for game development.
 
-![Isothermal-JS Editor](isothermal-logo-update (20240331064923).png)
-
 ## 🎮 Features ( Some yet to be implemented )
 
 - **All-in-one editor**: Code, test, and play your games within the browser
