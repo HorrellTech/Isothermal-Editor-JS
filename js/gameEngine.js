@@ -563,6 +563,13 @@ function createGameEngine(canvasId = 'canvasArea', textboxId = 'textbox') {
         }
     };
 
+    engine.instance_exists = function (instance) {
+        if (instance && instance.object_id && instance.object_id.instances) {
+            return instance.object_id.instances.includes(instance);
+        }
+        return false;
+    }
+
     // Game initialization
     engine.gameStart = function () {
         cancelAnimationFrame(engine.animationFrame);

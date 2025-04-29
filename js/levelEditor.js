@@ -1412,7 +1412,7 @@ const LevelEditor = (function() {
             levelCode += `      window.engine.view_wview = level.viewWidth || level.width;\n`;
             levelCode += `      window.engine.view_hview = level.viewHeight || level.height;\n`;
             levelCode += `      window.engine.background_color = level.backgroundColor;\n`;
-
+        
             // Set background properties
             levelCode += `      // Set background properties\n`;
             levelCode += `      window.engine.current_background = level.backgroundImage;\n`;
@@ -1448,10 +1448,10 @@ const LevelEditor = (function() {
                 levelCode += `  backgroundImageMode: "${level.backgroundImageMode || 'stretch'}",\n`;
                 levelCode += `  backgroundImageSpeed: ${level.backgroundImageSpeed || 0},\n`;
                 
-                // Create objects for this level
+                // Create objects for this level - now with priority handling
                 levelCode += `  load: function() {\n`;
                 levelCode += `    console.log("Creating objects for level: ${level.name}");\n\n`;
-
+        
                 // Add setup code if it exists
                 if (level.setupCode && level.setupCode.trim()) {
                     levelCode += `    // Execute level setup code\n`;
@@ -1464,7 +1464,7 @@ const LevelEditor = (function() {
                     levelCode += `      console.error("Error in level setup code:", err);\n`;
                     levelCode += `    }\n\n`;
                 }
-
+        
                 levelCode += `    // Get instance_create function\n`;
                 levelCode += `    var instance_create = window.instance_create || (window.engine && window.engine.instance_create);\n`;
                 levelCode += `    if (!instance_create) {\n`;
@@ -1473,48 +1473,100 @@ const LevelEditor = (function() {
                 levelCode += `    }\n\n`;
                 
                 if (level.objects.length > 0) {
-                    // Use the direct object variables instead of searching
-                    levelCode += `    // Create level objects using direct variable references\n`;
+                    // First, group objects by priority and name
+                    levelCode += `    // Create level objects - priority objects first\n`;
+                    
+                    // Get all unique object names in this level
+                    const objectNames = [...new Set(level.objects.map(obj => obj.objectName))];
+                    
+                    // Find which ones are priority objects
+                    levelCode += `    // Process priority objects first\n`;
                     
                     // Group objects by object name
                     const objectGroups = {};
                     level.objects.forEach(obj => {
                         if (!objectGroups[obj.objectName]) {
-                            objectGroups[obj.objectName] = [];
+                            objectGroups[obj.objectName] = {
+                                instances: [],
+                                isPriority: false
+                            };
                         }
-                        objectGroups[obj.objectName].push(obj);
+                        objectGroups[obj.objectName].instances.push(obj);
+                        
+                        // Check if this object is a priority object in the gameObjects array
+                        const gameObj = gameObjects.find(go => go.id === obj.objectId);
+                        if (gameObj && gameObj.isPriority) {
+                            objectGroups[obj.objectName].isPriority = true;
+                        }
                     });
                     
-                    // Create instances for each object type
+                    // Process priority objects first
                     Object.keys(objectGroups).forEach(objectName => {
-                        const instancesList = objectGroups[objectName];
+                        const group = objectGroups[objectName];
                         
-                        levelCode += `    // Create instances of ${objectName}\n`;
-                        levelCode += `    if (typeof ${objectName} !== 'undefined') {\n`;
-                        levelCode += `      console.log("Creating ${instancesList.length} instance(s) of ${objectName}");\n`;
-                        
-                        // Create each instance
-                        instancesList.forEach(obj => {
-                            levelCode += `      try {\n`;
-                            levelCode += `        var instance = instance_create(${obj.x}, ${obj.y}, ${objectName});\n`;
+                        if (group.isPriority) {
+                            levelCode += `    // Create priority instances of ${objectName}\n`;
+                            levelCode += `    if (typeof ${objectName} !== 'undefined') {\n`;
+                            levelCode += `      console.log("Creating ${group.instances.length} priority instance(s) of ${objectName}");\n`;
                             
-                            // Apply custom properties if any
-                            if (obj.properties && Object.keys(obj.properties).length > 0) {
-                                levelCode += `        // Apply custom properties\n`;
-                                Object.keys(obj.properties).forEach(prop => {
-                                    const val = JSON.stringify(obj.properties[prop]);
-                                    levelCode += `        instance.${prop} = ${val};\n`;
-                                });
-                            }
+                            // Create each instance
+                            group.instances.forEach(obj => {
+                                levelCode += `      try {\n`;
+                                levelCode += `        var instance = instance_create(${obj.x}, ${obj.y}, ${objectName});\n`;
+                                
+                                // Apply custom properties if any
+                                if (obj.properties && Object.keys(obj.properties).length > 0) {
+                                    levelCode += `        // Apply custom properties\n`;
+                                    Object.keys(obj.properties).forEach(prop => {
+                                        const val = JSON.stringify(obj.properties[prop]);
+                                        levelCode += `        instance.${prop} = ${val};\n`;
+                                    });
+                                }
+                                
+                                levelCode += `      } catch (err) {\n`;
+                                levelCode += `        console.error("Error creating ${objectName} at position (${obj.x}, ${obj.y}):", err);\n`;
+                                levelCode += `      }\n`;
+                            });
                             
-                            levelCode += `      } catch (err) {\n`;
-                            levelCode += `        console.error("Error creating ${objectName} at position (${obj.x}, ${obj.y}):", err);\n`;
-                            levelCode += `      }\n`;
-                        });
+                            levelCode += `    } else {\n`;
+                            levelCode += `      console.error("Priority object '${objectName}' not found");\n`;
+                            levelCode += `    }\n\n`;
+                        }
+                    });
+                    
+                    // Then process non-priority objects
+                    levelCode += `    // Now create non-priority objects\n`;
+                    Object.keys(objectGroups).forEach(objectName => {
+                        const group = objectGroups[objectName];
                         
-                        levelCode += `    } else {\n`;
-                        levelCode += `      console.error("Object '${objectName}' not found");\n`;
-                        levelCode += `    }\n\n`;
+                        if (!group.isPriority) {
+                            levelCode += `    // Create instances of ${objectName}\n`;
+                            levelCode += `    if (typeof ${objectName} !== 'undefined') {\n`;
+                            levelCode += `      console.log("Creating ${group.instances.length} instance(s) of ${objectName}");\n`;
+                            
+                            // Create each instance
+                            group.instances.forEach(obj => {
+                                levelCode += `      try {\n`;
+                                levelCode += `        var instance = instance_create(${obj.x}, ${obj.y}, ${objectName});\n`;
+                                
+                                // Apply custom properties if any
+                                if (obj.properties && Object.keys(obj.properties).length > 0) {
+                                    levelCode += `        // Apply custom properties\n`;
+                                    Object.keys(obj.properties).forEach(prop => {
+                                        const val = JSON.stringify(obj.properties[prop]);
+                                        levelCode += `        instance.${prop} = ${val};\n`;
+                                    });
+                                }
+                                
+                                levelCode += `      } catch (err) {\n`;
+                                levelCode += `        console.error("Error creating ${objectName} at position (${obj.x}, ${obj.y}):", err);\n`;
+                                levelCode += `      }\n`;
+                            });
+                            
+                            levelCode += `    } else {\n`;
+                            levelCode += `      console.error("Object '${objectName}' not found");\n`;
+                            levelCode += `    }\n\n`;
+                        }
                     });
                 } else {
                     levelCode += `    // No objects in this level\n`;

@@ -161,6 +161,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 id: generateId(),
                 name: name,
                 type: 'object',
+                isPriority : false,
                 events: {
                     awake: '// Initialize object\n\n',
                     loop: '// Object update logic\n\n',
@@ -480,6 +481,37 @@ document.addEventListener('DOMContentLoaded', () => {
             // Show object details
             objectName.textContent = obj.name;
             objectEditArea.style.display = 'flex';
+
+            // Add priority checkbox UI if it doesn't exist
+            let priorityCheckContainer = document.getElementById('priorityCheckContainer');
+            if (!priorityCheckContainer) {
+                priorityCheckContainer = document.createElement('div');
+                priorityCheckContainer.id = 'priorityCheckContainer';
+                priorityCheckContainer.className = 'priority-check-container';
+                priorityCheckContainer.innerHTML = `
+                    <label class="priority-label">
+                        <input type="checkbox" id="isPriorityCheck" /> Load with priority
+                        <span class="tooltip">Priority objects are loaded first to ensure their functions are available to other objects</span>
+                    </label>
+                `;
+                objectActions.appendChild(priorityCheckContainer);
+                
+                // Add event listener for the checkbox
+                document.getElementById('isPriorityCheck').addEventListener('change', function(e) {
+                    if (selectedObject) {
+                        const selectedObj = gameObjects.find(o => o.id === selectedObject);
+                        if (selectedObj) {
+                            selectedObj.isPriority = e.target.checked;
+                        }
+                    }
+                });
+            }
+
+            // Update priority checkbox state
+            const isPriorityCheck = document.getElementById('isPriorityCheck');
+            if (isPriorityCheck) {
+                isPriorityCheck.checked = obj.isPriority === true;
+            }
             
             // Clear selected state from events
             document.querySelectorAll('.event-item').forEach(item => {
@@ -500,6 +532,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     Drag objects to this folder to organize them.
                 </p>
             `;
+
+            // Hide priority checkbox for folders
+            const priorityCheckContainer = document.getElementById('priorityCheckContainer');
+            if (priorityCheckContainer) {
+                priorityCheckContainer.style.display = 'none';
+            }
         }
     }
 
@@ -1942,13 +1980,13 @@ this.invincible = false;
 this.invincible_time = 0;
 
 // Add physics module
-const physics = this.module_add(engine.create_physics_module());
+const physics = this.module_add(create_physics_module());
 physics.friction = 0.1;
 physics.gravity = 0.6;
 physics.max_gravity_speed = 12;
 
 // Add platformer controller module
-const platformer = this.module_add(engine.create_platformer_module());
+const platformer = this.module_add(create_platformer_module());
 platformer.max_speed = 4;
 platformer.jump_force = 10;
 platformer.can_jump = true;
@@ -2081,7 +2119,7 @@ this.move_speed = 2;
 this.direction = 1; // 1 = right, -1 = left
 
 // Add physics module for gravity
-const physics = this.module_add(engine.create_physics_module());
+const physics = this.module_add(create_physics_module());
 physics.friction = 0.1;
 physics.gravity = 0.5;
 physics.max_gravity_speed = 10;
@@ -2095,10 +2133,10 @@ if (!physics) return;
 physics.xspeed = this.move_speed * this.direction;
 
 // Check for edge or wall and turn around
-const leftCheck = engine.instance_position(this.x - 2, this.y + this.height + 5, objBlock);
-const rightCheck = engine.instance_position(this.x + this.width + 2, this.y + this.height + 5, objBlock);
-const leftWall = engine.instance_position(this.x - 2, this.y + this.height/2, objBlock);
-const rightWall = engine.instance_position(this.x + this.width + 2, this.y + this.height/2, objBlock);
+const leftCheck = instance_position(this.x - 2, this.y + this.height + 5, objBlock);
+const rightCheck = instance_position(this.x + this.width + 2, this.y + this.height + 5, objBlock);
+const leftWall = instance_position(this.x - 2, this.y + this.height/2, objBlock);
+const rightWall = instance_position(this.x + this.width + 2, this.y + this.height/2, objBlock);
 
 if ((this.direction < 0 && (!leftCheck || leftWall)) || 
     (this.direction > 0 && (!rightCheck || rightWall))) {
@@ -2128,6 +2166,7 @@ gameObjects.push({
     id: generateId(),
     name: 'objHelperFunctions',
     type: 'object',
+    isPriority: true,
     events: {
         awake: `// This object adds utility functions to other objects
 this.visible = false; // Don't draw this object`,
@@ -2187,6 +2226,7 @@ gameObjects.push({
     id: generateId(),
     name: 'objCollisionHelper',
     type: 'object',
+    isPriority: true,
     events: {
         awake: `// Initialize collision helper
 this.visible = false; // Don't draw this object
@@ -2234,4 +2274,269 @@ window.instance_position = function(x, y, object) {
             console.warn("Script Editor module not found. Make sure scriptEditor.js is included in your project.");
         }
     }
+
+    /*(function() {
+        // Check if the level editor is available
+        if (!window.LevelEditor) {
+            console.error("Level Editor not found!");
+            return;
+        }
+        
+        // Create a new platformer level
+        const createPlatformerLevel = function() {
+            // Generate a unique ID
+            const generateId = function() {
+                return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+            };
+            
+            // Create level data structure
+            const platformerLevel = {
+                id: generateId(),
+                name: "Platformer 1",
+                width: 1280,
+                height: 720,
+                viewWidth: 640,
+                viewHeight: 480,
+                gridSize: 32,
+                backgroundColor: "#87CEEB", // Sky blue
+                backgroundImage: null,
+                backgroundImageMode: "stretch",
+                backgroundImageSpeed: 0,
+                objects: [],
+                setupCode: "// Setup global level variables\nwindow.levelScore = 0;\nwindow.levelCoins = 0;\n"
+            };
+            
+            // Get game objects reference
+            const gameObjects = window.gameObjects || [];
+            
+            // Find object IDs by name
+            const findObjectByName = function(name) {
+                const obj = gameObjects.find(o => o.name === name);
+                return obj ? obj.id : null;
+            };
+            
+            // Object IDs
+            const playerObjId = findObjectByName("objPlayer");
+            const blockObjId = findObjectByName("objBlock");
+            const enemyObjId = findObjectByName("objEnemy");
+            const helperObjId = findObjectByName("objHelperFunctions");
+            const collisionObjId = findObjectByName("objCollisionHelper");
+            
+            // If we can't find necessary objects, abort
+            if (!playerObjId || !blockObjId) {
+                console.error("Required game objects not found!");
+                return null;
+            }
+            
+            // Create helper and collision objects (these are priority objects)
+            if (helperObjId) {
+                platformerLevel.objects.push({
+                    id: generateId(),
+                    objectId: helperObjId,
+                    objectName: "objHelperFunctions",
+                    gridX: 0,
+                    gridY: 0,
+                    x: 0, 
+                    y: 0,
+                    properties: {}
+                });
+            }
+            
+            if (collisionObjId) {
+                platformerLevel.objects.push({
+                    id: generateId(),
+                    objectId: collisionObjId,
+                    objectName: "objCollisionHelper",
+                    gridX: 1,
+                    gridY: 0,
+                    x: 32, 
+                    y: 0,
+                    properties: {}
+                });
+            }
+            
+            // Create player at starting position
+            if (playerObjId) {
+                platformerLevel.objects.push({
+                    id: generateId(),
+                    objectId: playerObjId,
+                    objectName: "objPlayer",
+                    gridX: 2,
+                    gridY: 5,
+                    x: 2 * 32, 
+                    y: 5 * 32,
+                    properties: {}
+                });
+            }
+            
+            // Create platform blocks
+            if (blockObjId) {
+                // Ground platforms
+                for (let x = 0; x < 40; x++) {
+                    platformerLevel.objects.push({
+                        id: generateId(),
+                        objectId: blockObjId,
+                        objectName: "objBlock",
+                        gridX: x,
+                        gridY: 20,
+                        x: x * 32, 
+                        y: 20 * 32,
+                        properties: {}
+                    });
+                }
+                
+                // Left wall
+                for (let y = 15; y < 20; y++) {
+                    platformerLevel.objects.push({
+                        id: generateId(),
+                        objectId: blockObjId,
+                        objectName: "objBlock",
+                        gridX: 0,
+                        gridY: y,
+                        x: 0, 
+                        y: y * 32,
+                        properties: {}
+                    });
+                }
+                
+                // Platforms
+                // Platform 1
+                for (let x = 5; x < 10; x++) {
+                    platformerLevel.objects.push({
+                        id: generateId(),
+                        objectId: blockObjId,
+                        objectName: "objBlock",
+                        gridX: x,
+                        gridY: 15,
+                        x: x * 32, 
+                        y: 15 * 32,
+                        properties: {}
+                    });
+                }
+                
+                // Platform 2
+                for (let x = 12; x < 18; x++) {
+                    platformerLevel.objects.push({
+                        id: generateId(),
+                        objectId: blockObjId,
+                        objectName: "objBlock",
+                        gridX: x,
+                        gridY: 12,
+                        x: x * 32, 
+                        y: 12 * 32,
+                        properties: {}
+                    });
+                }
+                
+                // Platform 3
+                for (let x = 20; x < 25; x++) {
+                    platformerLevel.objects.push({
+                        id: generateId(),
+                        objectId: blockObjId,
+                        objectName: "objBlock",
+                        gridX: x,
+                        gridY: 10,
+                        x: x * 32, 
+                        y: 10 * 32,
+                        properties: {}
+                    });
+                }
+                
+                // Platform 4
+                for (let x = 27; x < 35; x++) {
+                    platformerLevel.objects.push({
+                        id: generateId(),
+                        objectId: blockObjId,
+                        objectName: "objBlock",
+                        gridX: x,
+                        gridY: 8,
+                        x: x * 32, 
+                        y: 8 * 32,
+                        properties: {}
+                    });
+                }
+            }
+            
+            // Add enemies
+            if (enemyObjId) {
+                // Enemy on platform 1
+                platformerLevel.objects.push({
+                    id: generateId(),
+                    objectId: enemyObjId,
+                    objectName: "objEnemy",
+                    gridX: 7,
+                    gridY: 14,
+                    x: 7 * 32, 
+                    y: 14 * 32,
+                    properties: {}
+                });
+                
+                // Enemy on platform 2
+                platformerLevel.objects.push({
+                    id: generateId(),
+                    objectId: enemyObjId,
+                    objectName: "objEnemy",
+                    gridX: 15,
+                    gridY: 11,
+                    x: 15 * 32, 
+                    y: 11 * 32,
+                    properties: {}
+                });
+                
+                // Enemy on platform 3
+                platformerLevel.objects.push({
+                    id: generateId(),
+                    objectId: enemyObjId,
+                    objectName: "objEnemy",
+                    gridX: 22,
+                    gridY: 9,
+                    x: 22 * 32, 
+                    y: 9 * 32,
+                    properties: {}
+                });
+                
+                // Enemy on platform 4
+                platformerLevel.objects.push({
+                    id: generateId(),
+                    objectId: enemyObjId,
+                    objectName: "objEnemy",
+                    gridX: 30,
+                    gridY: 7,
+                    x: 30 * 32, 
+                    y: 7 * 32,
+                    properties: {}
+                });
+                
+                // Enemy on ground
+                platformerLevel.objects.push({
+                    id: generateId(),
+                    objectId: enemyObjId,
+                    objectName: "objEnemy",
+                    gridX: 35,
+                    gridY: 19,
+                    x: 35 * 32, 
+                    y: 19 * 32,
+                    properties: {}
+                });
+            }
+            
+            return platformerLevel;
+        };
+        
+        // Create the level data
+        const platformerLevel = createPlatformerLevel();
+        
+        if (platformerLevel) {
+            // Get current levels
+            let levels = window.LevelEditor.getLevels() || [];
+            
+            // Add our new level
+            levels.push(platformerLevel);
+            
+            // Update levels in level editor
+            window.LevelEditor.setLevels(levels);
+            
+            console.log("Sample platformer level created successfully!");
+        }
+    })();*/
 });
