@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Isothermal-JS</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- CodeMirror for code editor -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/javascript/javascript.min.js"></script>
+    <!-- Add keyword hints for autocomplete -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/hint/show-hint.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/hint/show-hint.css">
+    <!-- Add fold/unfold support for code blocks -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/fold/foldcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/fold/foldgutter.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/fold/brace-fold.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/fold/foldgutter.min.css">
+
+    <!-- Add JSZip library for ZIP file handling -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    
+    <!-- Load game engine scripts -->
+    <script src="js/keywords.js"></script>
+    <script src="js/modules/mod-animation-sheet.js"></script>
+    <script src="js/modules/mod-camera.js"></script>
+    <script src="js/modules/mod-dialog.js"></script>
+    <script src="js/modules/mod-health.js"></script>
+    <script src="js/modules/mod-inventory-basic.js"></script>
+    <script src="js/modules/mod-particle-system.js"></script>
+    <script src="js/modules/mod-pathfinding.js"></script>
+    <script src="js/modules/mod-physics-basic.js"></script>
+    <script src="js/modules/mod-platform-controller.js"></script>
+    <script src="js/modules/mod-tileset.js"></script>
+    <script src="js/modules/mod-weather.js"></script>
+    <!--script src="js/modules/mod.js"></script-->
+    <script src="js/gameEngine.js"></script>
+    <script src="js/scriptEditor.js"></script>
+    <script src="js/levelEditor.js"></script>
+    <script src="js/app.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Toolbar -->
+        <div class="toolbar">
+            <div class="toolbar-left">
+                <button class="toolbar-btn" id="newProject" title="New Project"><span class="icon">📄</span></button>
+                <button class="toolbar-btn" id="saveProject" title="Save Project"><span class="icon">💾</span></button>
+                <button class="toolbar-btn" id="loadProject" title="Load Project"><span class="icon">📂</span></button>
+                <button class="toolbar-btn" id="exportHTML" title="Export HTML5"><span class="icon">📦</span></button>
+            </div>
+            <div class="toolbar-center">
+                <h1>Isothermal-JS</h1>
+            </div>
+            <div class="toolbar-right">
+                <button class="toolbar-btn play-btn" id="playBtn" title="Run Game"><span class="icon">▶️</span></button>
+                <button class="toolbar-btn stop-btn" id="stopBtn" title="Stop Game" disabled><span class="icon">⏹️</span></button>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tab-container">
+            <div class="tab-header">
+                <button class="tab-btn active" data-tab="objects">Objects</button>
+                <button class="tab-btn" data-tab="scripts">Scripts</button>
+                <button class="tab-btn" data-tab="levels">Levels</button>
+                <button class="tab-btn" data-tab="imports">Imports</button>
+                <button class="tab-btn" data-tab="canvas">Canvas</button>
+                <button class="tab-btn" data-tab="settings">Settings</button>
+            </div>
+            <div class="tab-content">
+                <!-- Objects Tab -->
+                <div class="tab-pane active" id="objects">
+                    <div class="objects-container">
+                        <div class="objects-sidebar">
+                            <div class="sidebar-header">
+                                <h3>Objects</h3>
+                                <div class="object-controls">
+                                    <button id="addObjectBtn" class="small-btn" title="Add Object">+</button>
+                                    <button id="addFolderBtn" class="small-btn" title="Add Folder">📁</button>
+                                </div>
+                            </div>
+                            <div id="objectsList" class="objects-list">
+                                <!-- Objects will be dynamically added here -->
+                            </div>
+                        </div>
+                        <div class="object-detail">
+                            <div class="object-detail-header">
+                                <h3 id="objectName">No Object Selected</h3>
+                                <div class="object-actions" id="objectActions" style="display: none;">
+                                    <button id="renameObjectBtn" class="small-btn" title="Rename">✏️</button>
+                                    <button id="deleteObjectBtn" class="small-btn" title="Delete">🗑️</button>
+                                </div>
+                            </div>
+                            <div id="noObjectSelected" class="empty-state">
+                                <p>Select an object from the list or create a new one.</p>
+                            </div>
+                            <div id="objectEditArea" class="object-edit-area" style="display: none;">
+                                <div class="events-list" id="eventsList">
+                                    <div class="event-item" data-event="awake">awake()</div>
+                                    <div class="event-item" data-event="loop">loop()</div>
+                                    <div class="event-item" data-event="loop_begin">loop_begin()</div>
+                                    <div class="event-item" data-event="loop_end">loop_end()</div>
+                                    <div class="event-item" data-event="draw">draw()</div>
+                                    <div class="event-item" data-event="draw_gui">draw_gui()</div>
+                                </div>
+                                <div class="event-editor" id="eventEditor">
+                                    <div class="event-editor-header">
+                                        <h4 id="currentEventName">No Event Selected</h4>
+                                    </div>
+                                    <div id="eventCodeEditor" class="event-code-editor">
+                                        <textarea id="code-editor"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>                
+
+                <!-- Levels Tab -->
+                <div class="tab-pane" id="levels">
+                    <div class="level-editor-container">
+                        <!-- Left Panel: Level List -->
+                        <div class="level-list-panel">
+                            <div class="panel-header">
+                                <h3>Levels</h3>
+                                <div class="level-controls">
+                                    <button id="addLevelBtn" class="small-btn" title="Add Level">+</button>
+                                </div>
+                            </div>
+                            <div id="levelsList" class="levels-list">
+                                <!-- Levels will be dynamically added here -->
+                            </div>
+                        </div>
+                        
+                        <!-- Middle Panel: Object Palette and Settings Tabs -->
+                        <div class="level-details-panel">
+                            <div class="level-detail-header" id="levelDetailHeader" style="display: none;">
+                                <h3 id="levelName">No Level Selected</h3>
+                                <div class="level-actions" id="levelActions" style="display: none;">
+                                    <button id="renameLevelBtn" class="small-btn" title="Rename">✏️</button>
+                                    <button id="deleteLevelBtn" class="small-btn" title="Delete">🗑️</button>
+                                </div>
+                            </div>
+                            
+                            <!-- Tabs for palette and settings -->
+                            <div class="level-editor-tabs" id="levelEditorTabs" style="display: none;">
+                                <button class="level-tab-btn active" data-level-tab="objects">Objects</button>
+                                <button class="level-tab-btn" data-level-tab="settings">Settings</button>
+                            </div>
+                            
+                            <!-- Objects Tab Content -->
+                            <div class="level-tab-pane active" id="objects-tab">
+                                <h4>Objects Palette</h4>
+                                <div id="objectPalette" class="object-palette">
+                                    <!-- Objects will be dynamically added here -->
+                                </div>
+                            </div>
+                            
+                            <!-- Settings Tab Content -->
+                            <div class="level-tab-pane" id="settings-tab">
+                                <h4>Level Settings</h4>
+                                <div class="settings-group">
+                                    <label>Grid Size:</label>
+                                    <select id="gridSizeSelect">
+                                        <option value="16">16x16</option>
+                                        <option value="32" selected>32x32</option>
+                                        <option value="64">64x64</option>
+                                    </select>
+                                </div>
+                                <div class="settings-group">
+                                    <label>Room Size:</label>
+                                    <input type="number" id="levelWidthInput" placeholder="Width" min="100">
+                                    <span>x</span>
+                                    <input type="number" id="levelHeightInput" placeholder="Height" min="100">
+                                </div>
+                                <div class="settings-group">
+                                    <label>View Size:</label>
+                                    <input type="number" id="viewWidthInput" placeholder="Width" min="100">
+                                    <span>x</span>
+                                    <input type="number" id="viewHeightInput" placeholder="Height" min="100">
+                                </div>
+                                <div class="settings-group">
+                                    <label>Background:</label>
+                                    <input type="color" id="bgColorInput" value="#333333">
+                                </div>
+                                <div class="settings-group">
+                                    <label>Background Image:</label>
+                                    <select id="levelBackgroundSelect">
+                                        <option value="">None</option>
+                                        <!-- Will be populated with available sprite resources -->
+                                    </select>
+                                    <div id="backgroundImageOptions" style="margin-top: 8px; display: none;">
+                                        <label>
+                                            <input type="radio" name="bgMode" value="stretch" checked> Stretch
+                                        </label>
+                                        <label>
+                                            <input type="radio" name="bgMode" value="tile"> Tile
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="levelSetupCode">Level Setup Code:</label>
+                                    <div class="setup-code-container">
+                                        <button id="editSetupCodeBtn" class="btn btn-primary">Edit Setup Code</button>
+                                    </div>
+                                </div>
+                                <button id="applyLevelSettings" class="btn">Apply Settings</button>
+                            </div>
+                        </div>
+                        
+                        <!-- Right Panel: Canvas and Tools -->
+                        <div class="level-editor-main">
+                            <div id="noLevelSelected" class="empty-state">
+                                <p>Select a level from the list or create a new one.</p>
+                            </div>
+                            
+                            <div id="levelEditArea" class="level-edit-area" style="display: none;">
+                                <div class="level-toolbar">
+                                    <div class="tool-group">
+                                        <button id="placeObjectBtn" class="tool-btn active" title="Place Objects">🎮</button>
+                                        <button id="eraseBtn" class="tool-btn" title="Erase">🧹</button>
+                                    </div>
+                                </div>
+                                <div class="grid-editor">
+                                    <div class="grid-container">
+                                        <canvas id="levelEditorCanvas" width="640" height="480"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Imports Tab -->
+                <div class="tab-pane" id="imports">
+                    <div class="import-section">
+                        <h3>Import Resources</h3>
+                        <!-- Import controls for sprites, audio, etc -->
+                    </div>
+                </div>
+                
+                <!-- Canvas Tab -->
+                <div class="tab-pane" id="canvas">
+                    <div class="canvas-container" id="canvasContainer">
+                        <canvas id="gameCanvas" width="640" height="480"></canvas>
+                    </div>
+                </div>
+
+                <!-- Scripts Tab -->
+                <div class="tab-pane" id="scripts">
+                    <div class="scripts-container">
+                        <div class="scripts-sidebar">
+                            <div class="sidebar-header">
+                                <h3>Scripts</h3>
+                                <div class="script-controls">
+                                    <button id="addScriptBtn" class="small-btn" title="Add Script">+</button>
+                                    <button id="addScriptFolderBtn" class="small-btn" title="Add Folder">📁</button>
+                                </div>
+                            </div>
+                            <div id="scriptsList" class="scripts-list">
+                                <!-- Scripts will be dynamically added here -->
+                            </div>
+                        </div>
+                        <div class="script-detail">
+                            <div class="script-detail-header">
+                                <h3 id="scriptName">No Script Selected</h3>
+                                <div class="script-actions" id="scriptActions" style="display: none;">
+                                    <button id="renameScriptBtn" class="small-btn" title="Rename">✏️</button>
+                                    <button id="deleteScriptBtn" class="small-btn" title="Delete">🗑️</button>
+                                </div>
+                            </div>
+                            <div id="noScriptSelected" class="empty-state">
+                                <p>Select a script from the list or create a new one.</p>
+                            </div>
+                            <div id="scriptEditArea" class="script-edit-area" style="display: none;">
+                                <div id="scriptCodeEditor" class="script-code-editor">
+                                    <textarea id="script-code-editor"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Settings Tab -->
+                <div class="tab-pane" id="settings">
+                    <div class="settings-section">
+                        <h3>Editor Settings</h3>
+                        <div class="setting-item">
+                            <label for="themeSetting">Editor Theme:</label>
+                            <select id="themeSetting">
+                                <option value="monokai">Monokai (Dark)</option>
+                                <option value="eclipse">Eclipse (Light)</option>
+                                <option value="dracula">Dracula</option>
+                                <option value="material">Material</option>
+                            </select>
+                        </div>
+                        <div class="setting-item">
+                            <label for="fontSizeSetting">Font Size:</label>
+                            <input type="number" id="fontSizeSetting" min="10" max="24" value="14">
+                        </div>
+                        
+                        <h3>Canvas Settings</h3>
+                        <div class="setting-item">
+                            <label for="canvasWidthSetting">Canvas Width:</label>
+                            <input type="number" id="canvasWidthSetting" min="320" max="1920" value="640">
+                        </div>
+                        <div class="setting-item">
+                            <label for="canvasHeightSetting">Canvas Height:</label>
+                            <input type="number" id="canvasHeightSetting" min="240" max="1080" value="480">
+                        </div>
+                        <div class="setting-item">
+                            <label for="screenFitSetting">Screen Fit Mode:</label>
+                            <select id="screenFitSetting">
+                                <option value="none">None (No scaling)</option>
+                                <option value="stretch">Stretch (Fill screen)</option>
+                                <option value="maintain" selected>Maintain Aspect Ratio</option>
+                                <option value="integer">Integer Scaling (Pixel perfect)</option>
+                            </select>
+                        </div>
+                        <button id="applyCanvasSettings" class="btn">Apply Canvas Settings</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hidden elements for file handling -->
+        <a id="downloadLink" style="display: none;"></a>
+        <input type="file" id="loadFile" style="display: none;" accept=".json">
+        <textarea id="textbox" style="display: none;"></textarea>
+
+        <!-- Footer -->
+        <div class="footer">
+            <div class="footer-content">
+                <div class="footer-brand">SynKrown</div>
+                <div class="footer-support">
+                    <a href="https://www.buymeacoffee.com/SynKrown" target="_blank" rel="noopener noreferrer">
+                        <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" class="bmc-button">
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
