@@ -2548,3 +2548,52 @@ li.CodeMirror-hint-active {
     height: 100%;
     font-size: 14px;
 }
+
+/* Level editor specific fixes */
+.level-editor-container {
+    display: flex;
+    flex-direction: row;
+    height: calc(100vh - 180px);
+    max-height: 800px;
+    overflow: hidden;
+}
+
+.level-list-panel, .level-details-panel {
+    overflow-y: auto;
+    max-height: 100%;
+}
+
+.level-editor-main {
+    overflow: auto;
+    max-height: 100%;
+    flex: 1;
+}
+
+.grid-container {
+    overflow: auto;
+    max-height: calc(100vh - 220px);
+}
+
+/* Fix for objects panel */
+.object-edit-area {
+    display: flex;
+    flex-direction: row;
+    height: calc(100vh - 180px);
+    max-height: 700px;
+}
+
+.events-list {
+    overflow-y: auto;
+}
+
+.event-editor {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+.event-code-editor {
+    flex: 1;
+    overflow: hidden;
+}

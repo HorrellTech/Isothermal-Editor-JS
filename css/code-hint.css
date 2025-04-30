@@ -1,0 +1,315 @@
+/* Code Hint System Styles */
+
+.code-hint-container {
+    position: absolute;
+    left: 0;
+    top: 100%; /* Position it just below the editor */
+    z-index: 100;
+    width: 100%;
+    background: #232323;
+    border-top: 1px solid #444;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    display: block !important; /* Force visibility */
+}
+
+.code-hint-resize-handle {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 5px;
+    cursor: ns-resize;
+    background: linear-gradient(to bottom, rgba(85,85,85,0.7) 0%, rgba(85,85,85,0) 100%);
+    z-index: 10;
+}
+
+.code-hint-panel {
+    padding: 10px;
+    height: calc(100% - 35px);
+    overflow-y: auto;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.code-hint-help-button {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background-color: #666;
+    color: white;
+    text-align: center;
+    line-height: 20px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.2s;
+    z-index: 11;
+}
+
+.code-hint-help-button:hover {
+    background-color: #888;
+}
+
+.hint-item {
+    padding: 2px 5px;
+    cursor: pointer;
+    border-radius: 3px;
+    color: #f8f8f2;
+    margin-bottom: 3px;
+    display: inline-block;
+    margin-right: 8px;
+}
+
+.hint-item:hover {
+    background-color: #444;
+}
+
+.hint-item.function {
+    color: #66d9ef;
+}
+
+.hint-item.constant {
+    color: #ae81ff;
+}
+
+.hint-item.property {
+    color: #a6e22e;
+}
+
+.hint-function-details {
+    padding: 5px;
+    margin-top: 10px;
+    border-top: 1px solid #444;
+}
+
+.hint-function-signature {
+    font-weight: bold;
+    color: #66d9ef;
+    margin-bottom: 5px;
+}
+
+.hint-param {
+    margin-left: 15px;
+    display: block;
+    color: #f8f8f2;
+}
+
+.hint-param .param-name {
+    color: #fd971f;
+}
+
+.hint-param .param-type {
+    color: #a6e22e;
+}
+
+.hint-section {
+    margin-bottom: 10px;
+}
+
+.hint-section-title {
+    font-weight: bold;
+    margin-bottom: 5px;
+    color: #f92672;
+}
+
+/* Documentation modal styles */
+.doc-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+}
+
+.doc-modal {
+    background-color: #2d2d2d;
+    border-radius: 5px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    width: 80%;
+    max-width: 1000px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.doc-modal-header {
+    padding: 15px;
+    border-bottom: 1px solid #444;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.doc-modal-title {
+    font-size: 18px;
+    font-weight: bold;
+    color: #f8f8f2;
+}
+
+.doc-modal-close {
+    background: none;
+    border: none;
+    color: #f8f8f2;
+    font-size: 24px;
+    cursor: pointer;
+}
+
+.doc-modal-sidebar {
+    width: 200px;
+    border-right: 1px solid #444;
+    padding: 10px;
+    overflow-y: auto;
+}
+
+.doc-category {
+    margin-bottom: 15px;
+}
+
+.doc-category-title {
+    font-weight: bold;
+    margin-bottom: 5px;
+    color: #f92672;
+}
+
+.doc-function-list {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+.doc-function-item {
+    padding: 3px 5px;
+    cursor: pointer;
+    border-radius: 3px;
+}
+
+.doc-function-item:hover {
+    background-color: #444;
+}
+
+.doc-function-item.selected {
+    background-color: #374151;
+}
+
+.doc-modal-content {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+.doc-modal-body {
+    flex: 1;
+    padding: 15px;
+    overflow-y: auto;
+}
+
+.doc-function-detail {
+    margin-bottom: 20px;
+}
+
+.doc-function-name {
+    font-size: 18px;
+    font-weight: bold;
+    color: #66d9ef;
+    margin-bottom: 10px;
+}
+
+.doc-function-description {
+    margin-bottom: 15px;
+    line-height: 1.5;
+}
+
+.doc-function-params {
+    margin-bottom: 15px;
+}
+
+.doc-param-item {
+    margin-bottom: 5px;
+}
+
+.doc-param-name {
+    color: #fd971f;
+    font-weight: bold;
+}
+
+.doc-param-type {
+    color: #a6e22e;
+    margin-left: 5px;
+}
+
+.doc-function-return {
+    margin-bottom: 15px;
+}
+
+.doc-function-example {
+    background-color: #222;
+    padding: 10px;
+    border-radius: 3px;
+    font-family: monospace;
+    white-space: pre-wrap;
+}
+
+/* For documentation search */
+.doc-search-container {
+    padding: 10px 15px;
+    border-bottom: 1px solid #444;
+}
+
+.doc-search-input {
+    width: 100%;
+    padding: 8px;
+    background-color: #333;
+    border: 1px solid #555;
+    border-radius: 4px;
+    color: #f8f8f2;
+    font-size: 14px;
+}
+
+.doc-search-input:focus {
+    outline: none;
+    border-color: #66d9ef;
+}
+
+/* For highlighted params in the function signature */
+.current-param {
+    background-color: rgba(255, 255, 0, 0.2);
+    font-weight: bold;
+    padding: 0 2px;
+    border-radius: 2px;
+}
+
+.search-highlight {
+    background-color: rgba(255, 166, 0, 0.3);
+    border-radius: 2px;
+}
+
+/* Code snippet styles */
+.hint-section code {
+    background-color: #333;
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-family: monospace;
+}
+
+/* Keyword list container */
+.keyword-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-bottom: 10px;
+}
+
+.editor-hint-wrapper {
+    width: 100%;
+    min-width: 0;
+    display: block;
+    position: relative;
+}

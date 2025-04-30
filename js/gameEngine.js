@@ -25,8 +25,8 @@ function createGameEngine(canvasId = 'canvasArea', textboxId = 'textbox') {
     engine.room_height = 768;
     engine.view_xview = 0;
     engine.view_yview = 0;
-    engine.view_wview = 640;
-    engine.view_hview = 480;
+    engine.view_wview = 1024;
+    engine.view_hview = 768;
     engine.time_scale = 1.0;
     engine.instance_count = 0;
     engine.object_count = 0;
@@ -43,6 +43,17 @@ function createGameEngine(canvasId = 'canvasArea', textboxId = 'textbox') {
         return `rgb(${r},${g},${b})`;
     };
 
+    // Shape drawing system - start with these variables
+    engine._shape_points = []; // Stores points for the current shape
+    engine._shape_outline = true; // Whether to stroke or fill the shape
+    engine._shape_spline = 0; // Spline tension factor (0 = no spline, straight lines)
+    engine._shape_started = false; // Track if shape drawing has been started
+
+    // Surface management system
+    engine.surfaces = {}; // Store created surfaces
+    engine.currentSurfaceStack = []; // Keep track of surface stack
+    engine.defaultSurface = null; // Reference to the main canvas context
+
     // Define color constants
     engine.c_white = engine.rgb(255, 255, 255);
     engine.c_black = engine.rgb(0, 0, 0);
@@ -50,6 +61,24 @@ function createGameEngine(canvasId = 'canvasArea', textboxId = 'textbox') {
     engine.c_ltgray = engine.rgb(176, 176, 176);
     engine.c_gray = engine.rgb(128, 128, 128);
     engine.c_dkgray = engine.rgb(64, 64, 64);
+    engine.c_blue = engine.rgb(0, 0, 255);
+    engine.c_green = engine.rgb(0, 255, 0);
+    engine.c_yellow = engine.rgb(255, 255, 0);
+    engine.c_cyan = engine.rgb(0, 255, 255);
+    engine.c_magenta = engine.rgb(255, 0, 255);
+    engine.c_orange = engine.rgb(255, 165, 0);
+    engine.c_purple = engine.rgb(128, 0, 128);
+    engine.c_brown = engine.rgb(143, 85, 47);
+    engine.c_pink = engine.rgb(255, 192, 203);
+    engine.c_gold = engine.rgb(255, 215, 0);
+    engine.c_silver = engine.rgb(192, 192, 192);
+    engine.c_steel = engine.rgb(70, 130, 180);
+    engine.c_olive = engine.rgb(128, 128, 0);
+    engine.c_teal = engine.rgb(0, 128, 128);
+    engine.c_navy = engine.rgb(0, 0, 128);
+    engine.c_lime = engine.rgb(0, 255, 0);
+    engine.c_maroon = engine.rgb(128, 0, 0);
+
     engine.background_color = engine.c_ltgray;
     engine.current_background = null;
     engine.background_mode = "stretch"; // Default background mode
@@ -451,6 +480,27 @@ function createGameEngine(canvasId = 'canvasArea', textboxId = 'textbox') {
         engine.surfaceTarget.fillText(text, x - engine.view_xview, y - engine.view_yview + engine.font_size);
     };
 
+    // Draw text with alignment options
+    engine.draw_text_ext = function(x, y, text, lineHeight, maxWidth) {
+        const words = text.split(' ');
+        let currentLine = words[0];
+        const xPos = x - engine.view_xview;
+        let yPos = y - engine.view_yview + engine.font_size;
+        
+        for (let i = 1; i < words.length; i++) {
+            const testLine = currentLine + ' ' + words[i];
+            const metrics = engine.surfaceTarget.measureText(testLine);
+            if (metrics.width > maxWidth) {
+                engine.surfaceTarget.fillText(currentLine, xPos, yPos);
+                currentLine = words[i];
+                yPos += lineHeight;
+            } else {
+                currentLine = testLine;
+            }
+        }
+        engine.surfaceTarget.fillText(currentLine, xPos, yPos);
+    };
+
     engine.draw_rectangle = function (x1, y1, x2, y2, outline) {
         engine.surfaceTarget.beginPath();
         if (outline) {
@@ -471,6 +521,12 @@ function createGameEngine(canvasId = 'canvasArea', textboxId = 'textbox') {
         engine.surfaceTarget.closePath();
     };
 
+    // Set line properties
+    engine.draw_set_line_width = function(width) {
+        engine.surfaceTarget.lineWidth = width;
+    };
+
+    // Draw a line
     engine.draw_line = function (x1, y1, x2, y2) {
         engine.surfaceTarget.beginPath();
         engine.surfaceTarget.moveTo(x1 - engine.view_xview, y1 - engine.view_yview);
@@ -479,6 +535,7 @@ function createGameEngine(canvasId = 'canvasArea', textboxId = 'textbox') {
         engine.surfaceTarget.closePath();
     };
 
+    // Draw a circle with the given radius
     engine.draw_circle = function (x, y, radius, outline) {
         engine.surfaceTarget.beginPath();
         engine.surfaceTarget.arc(
@@ -496,20 +553,166 @@ function createGameEngine(canvasId = 'canvasArea', textboxId = 'textbox') {
         engine.surfaceTarget.closePath();
     }
 
-    engine.draw_image = function (image, x, y, width, height) {
+    // Draw an ellipse with the given dimensions
+    engine.draw_ellipse = function(x, y, width, height, outline) {
+        engine.surfaceTarget.beginPath();
+        engine.surfaceTarget.ellipse(
+            x - engine.view_xview,
+            y - engine.view_yview,
+            width / 2,
+            height / 2,
+            0,
+            0,
+            Math.PI * 2
+        );
+        if (outline) {
+            engine.surfaceTarget.stroke();
+        } else {
+            engine.surfaceTarget.fill();
+        }
+        engine.surfaceTarget.closePath();
+    };
+
+    // Draw a rounded rectangle
+    engine.draw_roundrect = function(x1, y1, x2, y2, radius, outline) {
+        const x = x1 - engine.view_xview;
+        const y = y1 - engine.view_yview;
+        const width = x2 - x1;
+        const height = y2 - y1;
+        
+        engine.surfaceTarget.beginPath();
+        engine.surfaceTarget.moveTo(x + radius, y);
+        engine.surfaceTarget.lineTo(x + width - radius, y);
+        engine.surfaceTarget.arcTo(x + width, y, x + width, y + radius, radius);
+        engine.surfaceTarget.lineTo(x + width, y + height - radius);
+        engine.surfaceTarget.arcTo(x + width, y + height, x + width - radius, y + height, radius);
+        engine.surfaceTarget.lineTo(x + radius, y + height);
+        engine.surfaceTarget.arcTo(x, y + height, x, y + height - radius, radius);
+        engine.surfaceTarget.lineTo(x, y + radius);
+        engine.surfaceTarget.arcTo(x, y, x + radius, y, radius);
+        engine.surfaceTarget.closePath();
+        
+        if (outline) {
+            engine.surfaceTarget.stroke();
+        } else {
+            engine.surfaceTarget.fill();
+        }
+    };
+
+    // Draw a gradient rectangle
+    engine.draw_gradient_rect = function(x1, y1, x2, y2, color1, color2, vertical) {
+        const x = x1 - engine.view_xview;
+        const y = y1 - engine.view_yview;
+        const width = x2 - x1;
+        const height = y2 - y1;
+        
+        const gradient = vertical 
+            ? engine.surfaceTarget.createLinearGradient(x, y, x, y + height)
+            : engine.surfaceTarget.createLinearGradient(x, y, x + width, y);
+            
+        gradient.addColorStop(0, color1);
+        gradient.addColorStop(1, color2);
+        
+        engine.surfaceTarget.fillStyle = gradient;
+        engine.surfaceTarget.fillRect(x, y, width, height);
+        
+        // Reset fill style to default
+        engine.surfaceTarget.fillStyle = engine.c_white;
+    };
+
+    // Draw a triangle
+    engine.draw_triangle = function(x1, y1, x2, y2, x3, y3, outline) {
+        engine.surfaceTarget.beginPath();
+        engine.surfaceTarget.moveTo(x1 - engine.view_xview, y1 - engine.view_yview);
+        engine.surfaceTarget.lineTo(x2 - engine.view_xview, y2 - engine.view_yview);
+        engine.surfaceTarget.lineTo(x3 - engine.view_xview, y3 - engine.view_yview);
+        engine.surfaceTarget.closePath();
+        
+        if (outline) {
+            engine.surfaceTarget.stroke();
+        } else {
+            engine.surfaceTarget.fill();
+        }
+    };
+
+    engine.draw_sprite = function (sprite, x, y) {
+        if (!sprite || !sprite.image || !sprite.image.complete) return;
+        
+        const ctx = engine.surfaceTarget;
+        const width = sprite.width || sprite.image.width;
+        const height = sprite.height || sprite.image.height;
+        
+        ctx.drawImage(
+            sprite.image, 
+            x - engine.view_xview, 
+            y - engine.view_yview, 
+            width, 
+            height
+        );
+    }
+
+    // Draw a sprite with scaling and rotation
+    engine.draw_sprite_ext = function(sprite, x, y, xscale, yscale, rotation, alpha) {
+        if (!sprite || !sprite.image || !sprite.image.complete) return;
+        
+        const ctx = engine.surfaceTarget;
+        const width = sprite.width || sprite.image.width;
+        const height = sprite.height || sprite.image.height;
+        
+        ctx.save();
+        ctx.translate(x - engine.view_xview, y - engine.view_yview);
+        ctx.rotate(rotation * Math.PI / 180);
+        ctx.globalAlpha = alpha !== undefined ? alpha : 1;
+        ctx.drawImage(
+            sprite.image, 
+            -(width * xscale) / 2,  // Center the sprite
+            -(height * yscale) / 2, 
+            width * xscale, 
+            height * yscale
+        );
+        ctx.restore();
+    };
+
+    // Draw a frame from a sprite sheet
+    engine.draw_sprite_part = function(sprite, frame, x, y, width, height) {
+        if (!sprite || !sprite.image || !sprite.image.complete) return;
+        
+        const framesPerRow = sprite.framesPerRow || 1;
+        const frameWidth = sprite.frameWidth || sprite.image.width;
+        const frameHeight = sprite.frameHeight || sprite.image.height;
+        
+        const row = Math.floor(frame / framesPerRow);
+        const col = frame % framesPerRow;
+        
+        engine.surfaceTarget.drawImage(
+            sprite.image,
+            col * frameWidth,
+            row * frameHeight,
+            frameWidth,
+            frameHeight,
+            x - engine.view_xview,
+            y - engine.view_yview,
+            width || frameWidth,
+            height || frameHeight
+        );
+    };
+
+    // Draw an image at a width and height
+    engine.draw_image = function (image, x, y) {
         if (image.complete) {
             engine.surfaceTarget.drawImage(
                 image,
                 x - engine.view_xview,
                 y - engine.view_yview,
-                width || image.width,
-                height || image.height
+                image.width,
+                image.height
             );
         } else {
             console.error("Image not loaded:", image.src);
         }
     };
 
+    // Draw a background image with optional tiling and parallax effect
     engine.draw_background = function() {
         // Fill background with solid color first
         engine.surfaceTarget.fillStyle = engine.background_color || "#000000";
@@ -570,6 +773,275 @@ function createGameEngine(canvasId = 'canvasArea', textboxId = 'textbox') {
         return false;
     }
 
+    // Surface management functions
+    // Create a new surface (offscreen canvas)
+    engine.surface_create = function(width, height) {
+        // Create a unique ID for the surface
+        const id = 'surface_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+        
+        // Create the canvas
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        
+        // Get and store the context
+        const ctx = canvas.getContext('2d');
+        
+        // Create the surface object
+        const surface = {
+            id: id,
+            canvas: canvas,
+            context: ctx,
+            width: width,
+            height: height,
+            isValid: true
+        };
+        
+        // Store it in the surfaces collection
+        engine.surfaces[id] = surface;
+        
+        return surface;
+    };
+
+    // Set the active drawing target to a surface
+    engine.surface_set_target = function(surface) {
+        if (!surface || !surface.isValid) {
+            console.error("Cannot set target: Invalid surface");
+            return false;
+        }
+        
+        // If this is our first surface set, store the default surface
+        if (engine.currentSurfaceStack.length === 0) {
+            engine.defaultSurface = engine.surfaceTarget;
+        }
+        
+        // Push current surface to the stack
+        engine.currentSurfaceStack.push(engine.surfaceTarget);
+        
+        // Set the new surface as the target
+        engine.surfaceTarget = surface.context;
+        
+        return true;
+    };
+
+    // Reset the drawing target to the previous surface
+    engine.surface_reset_target = function() {
+        if (engine.currentSurfaceStack.length === 0) {
+            console.error("Cannot reset target: No surface on stack");
+            return false;
+        }
+        
+        // Pop the last surface from the stack
+        engine.surfaceTarget = engine.currentSurfaceStack.pop();
+        
+        return true;
+    };
+    
+    // Free a surface from memory
+    engine.surface_free = function(surface) {
+        if (!surface || !surface.isValid) {
+            return false;
+        }
+        
+        // Mark as invalid
+        surface.isValid = false;
+        
+        // Remove from collection
+        delete engine.surfaces[surface.id];
+        
+        return true;
+    };
+    
+    // Check if a surface is valid
+    engine.surface_exists = function(surface) {
+        return surface && surface.isValid;
+    };
+    
+    // Draw a surface at the specified position
+    engine.draw_surface = function(surface, x, y, width, height) {
+        if (!surface || !surface.isValid) {
+            console.error("Cannot draw surface: Invalid surface");
+            return false;
+        }
+        
+        width = width || surface.width;
+        height = height || surface.height;
+        
+        engine.surfaceTarget.drawImage(
+            surface.canvas,
+            x - engine.view_xview,
+            y - engine.view_yview,
+            width,
+            height
+        );
+        
+        return true;
+    };
+    
+    // Draw a part of a surface (like sprite_part)
+    engine.draw_surface_part = function(surface, sx, sy, sw, sh, x, y, width, height) {
+        if (!surface || !surface.isValid) {
+            console.error("Cannot draw surface part: Invalid surface");
+            return false;
+        }
+        
+        width = width || sw;
+        height = height || sh;
+        
+        engine.surfaceTarget.drawImage(
+            surface.canvas,
+            sx, sy, sw, sh,
+            x - engine.view_xview,
+            y - engine.view_yview,
+            width, height
+        );
+        
+        return true;
+    };
+    
+    // Clear a surface with a specific color
+    engine.surface_clear = function(surface, color) {
+        if (!surface || !surface.isValid) {
+            console.error("Cannot clear surface: Invalid surface");
+            return false;
+        }
+        
+        // Store current target
+        const currentTarget = engine.surfaceTarget;
+        
+        // Set target to this surface
+        engine.surfaceTarget = surface.context;
+        
+        // Clear with color
+        const originalStyle = engine.surfaceTarget.fillStyle;
+        engine.surfaceTarget.fillStyle = color || "transparent";
+        engine.surfaceTarget.clearRect(0, 0, surface.width, surface.height);
+        engine.surfaceTarget.fillRect(0, 0, surface.width, surface.height);
+        engine.surfaceTarget.fillStyle = originalStyle;
+        
+        // Reset target
+        engine.surfaceTarget = currentTarget;
+        
+        return true;
+    };
+    
+    // Save surface to an image file (browser download)
+    engine.surface_save = function(surface, filename) {
+        if (!surface || !surface.isValid) {
+            console.error("Cannot save surface: Invalid surface");
+            return false;
+        }
+        
+        try {
+            // Create a download link
+            const link = document.createElement('a');
+            link.download = filename || 'surface.png';
+            link.href = surface.canvas.toDataURL('image/png');
+            
+            // Trigger click
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            return true;
+        } catch (e) {
+            console.error("Error saving surface:", e);
+            return false;
+        }
+    };
+    
+    // Get a pixel's color from a surface
+    engine.surface_getpixel = function(surface, x, y) {
+        if (!surface || !surface.isValid) {
+            console.error("Cannot get pixel: Invalid surface");
+            return null;
+        }
+        
+        try {
+            const data = surface.context.getImageData(x, y, 1, 1).data;
+            return {
+                r: data[0],
+                g: data[1],
+                b: data[2],
+                a: data[3] / 255
+            };
+        } catch (e) {
+            console.error("Error getting pixel data:", e);
+            return null;
+        }
+    };
+    
+    // Copy one surface to another
+    engine.surface_copy = function(targetSurface, x, y, sourceSurface) {
+        if (!targetSurface || !targetSurface.isValid || !sourceSurface || !sourceSurface.isValid) {
+            console.error("Cannot copy surface: Invalid surface");
+            return false;
+        }
+        
+        const currentTarget = engine.surfaceTarget;
+        engine.surfaceTarget = targetSurface.context;
+        
+        engine.surfaceTarget.drawImage(sourceSurface.canvas, x, y);
+        
+        engine.surfaceTarget = currentTarget;
+        return true;
+    };
+    
+    // Blend mode management
+    engine.blendModes = {
+        bm_normal: "source-over",
+        bm_add: "lighter",
+        bm_subtract: "difference",
+        bm_multiply: "multiply",
+        bm_screen: "screen",
+        bm_overlay: "overlay",
+        bm_darken: "darken",
+        bm_lighten: "lighten",
+        bm_destination_over: "destination-over",
+        bm_source_in: "source-in",
+        bm_destination_in: "destination-in",
+        bm_source_out: "source-out",
+        bm_destination_out: "destination-out",
+        bm_source_atop: "source-atop",
+        bm_destination_atop: "destination-atop",
+        bm_xor: "xor",
+        bm_copy: "copy"
+    };
+    
+    // Set the current blend mode
+    engine.surface_set_blendmode = function(mode) {
+        if (typeof mode === 'string' && engine.blendModes[mode]) {
+            engine.surfaceTarget.globalCompositeOperation = engine.blendModes[mode];
+        } else if (Object.values(engine.blendModes).includes(mode)) {
+            engine.surfaceTarget.globalCompositeOperation = mode;
+        } else {
+            console.error("Invalid blend mode:", mode);
+            return false;
+        }
+        return true;
+    };
+    
+    // Reset blend mode to normal
+    engine.surface_set_blendmode_normal = function() {
+        engine.surfaceTarget.globalCompositeOperation = "source-over";
+    };
+    
+    // Set blend mode to additive
+    engine.surface_set_blendmode_add = function() {
+        engine.surfaceTarget.globalCompositeOperation = "lighter";
+    };
+    
+    // Set blend mode to subtractive
+    engine.surface_set_blendmode_subtract = function() {
+        engine.surfaceTarget.globalCompositeOperation = "difference";
+    };
+
+    // Assign blend mode constants to engine
+    for (const [key, value] of Object.entries(engine.blendModes)) {
+        engine[key] = key;
+        window[key] = key;
+    }
+
     // Game initialization
     engine.gameStart = function () {
         cancelAnimationFrame(engine.animationFrame);
@@ -596,6 +1068,7 @@ function createGameEngine(canvasId = 'canvasArea', textboxId = 'textbox') {
             return;
         }
         engine.surfaceTarget = engine.context;
+        engine.defaultSurface = engine.surfaceTarget;
 
         // Set default drawing properties
         engine.draw_set_font(24, 'Arial');
@@ -627,6 +1100,44 @@ function createGameEngine(canvasId = 'canvasArea', textboxId = 'textbox') {
 
         // Start game loop
         engine.updateGameArea();
+    };
+
+    // Helper function to generate a spline path through points
+    engine._drawSplinePath = function(points, tension, closeShape) {
+        const ctx = engine.surfaceTarget;
+        const len = points.length;
+        
+        if (len < 3) return; // Not enough points for a spline
+        
+        ctx.moveTo(points[0].x, points[0].y);
+        
+        // Create a closed loop if requested
+        const pts = closeShape ? [...points, ...points.slice(0, 3)] : points;
+        const numPoints = pts.length;
+        
+        // Tension controls how "tight" the curve is (0.5 is a good default)
+        const t = Math.min(1, Math.max(0, tension)) * 0.5;
+        
+        // Draw the splines
+        for (let i = 0; i < numPoints - 3; i++) {
+            const p0 = pts[i];
+            const p1 = pts[i+1];
+            const p2 = pts[i+2];
+            const p3 = pts[i+3];
+            
+            // Calculate control points
+            const cp1x = p1.x + (p2.x - p0.x) * t;
+            const cp1y = p1.y + (p2.y - p0.y) * t;
+            const cp2x = p2.x - (p3.x - p1.x) * t;
+            const cp2y = p2.y - (p3.y - p1.y) * t;
+            
+            // Draw cubic Bezier curve
+            ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, p2.x, p2.y);
+        }
+        
+        if (closeShape) {
+            ctx.closePath();
+        }
     };
 
     engine.gameRestartEval = function () {
@@ -735,25 +1246,39 @@ function createGameEngine(canvasId = 'canvasArea', textboxId = 'textbox') {
     // Keyboard handling
     engine.key = {}; // Object to store key states
     engine.keyCode = {}; // Object to store key codes
-    engine.vk_left = 37;
-    engine.vk_up = 38;
-    engine.vk_right = 39;
-    engine.vk_down = 40;
-    engine.vk_space = 32;
-    engine.vk_enter = 13;
-    engine.vk_escape = 27;
-    engine.vk_shift = 16;
-    engine.vk_control = 17;
-    engine.vk_alt = 18;
+
+    // Define key codes and bind them to the window object
+    const keyBindings = {
+        vk_left: 37,
+        vk_up: 38,
+        vk_right: 39,
+        vk_down: 40,
+        vk_space: 32,
+        vk_enter: 13,
+        vk_escape: 27,
+        vk_shift: 16,
+        vk_control: 17,
+        vk_alt: 18
+    };
+
+    // Assign key bindings to both engine and window
+    for (const [key, value] of Object.entries(keyBindings)) {
+        engine[key] = value;
+        window[key] = value;
+    }
 
     // Key codes for letters A-Z
     for (let i = 65; i <= 90; i++) {
-        engine[`vk_${String.fromCharCode(i).toLowerCase()}`] = i;
+        const keyName = `vk_${String.fromCharCode(i).toLowerCase()}`;
+        engine[keyName] = i;
+        window[keyName] = i;
     }
 
     // Key codes for numbers 0-9
     for (let i = 48; i <= 57; i++) {
-        engine[`vk_${i - 48}`] = i;
+        const keyName = `vk_${i - 48}`;
+        engine[keyName] = i;
+        window[keyName] = i;
     }
 
     // Check if a key is currently pressed

@@ -4,56 +4,6 @@
  */
 
 const engineKeywords = [
-  // Object Lifecycle Functions
-  {
-    name: 'awake',
-    type: 'function',
-    description: 'Called once when an instance is created. Use this to initialize object-specific variables.',
-    parameters: [],
-    returns: 'void',
-    example: 'playerObj.awake = function() {\n  this.health = 100;\n  this.speed = 5;\n  this.score = 0;\n}'
-  },
-  {
-    name: 'loop',
-    type: 'function',
-    description: 'Main update function called every frame. Use for game logic and object behavior.',
-    parameters: [],
-    returns: 'void',
-    example: 'playerObj.loop = function() {\n  if(keyboard_check(65)) {\n    this.x -= this.speed;\n  }\n}'
-  },
-  {
-    name: 'loop_begin',
-    type: 'function',
-    description: 'Called at the start of each frame before the main loop function.',
-    parameters: [],
-    returns: 'void',
-    example: 'playerObj.loop_begin = function() {\n  this.prev_health = this.health;\n}'
-  },
-  {
-    name: 'loop_end',
-    type: 'function',
-    description: 'Called at the end of each frame after the main loop function.',
-    parameters: [],
-    returns: 'void',
-    example: 'playerObj.loop_end = function() {\n  if(this.health < this.prev_health) {\n    // Player took damage this frame\n  }\n}'
-  },
-  {
-    name: 'draw',
-    type: 'function',
-    description: 'Called each frame to render the object. Define how the object looks here.',
-    parameters: [],
-    returns: 'void',
-    example: 'playerObj.draw = function() {\n  draw_set_color(c_blue);\n  draw_rectangle(this.x, this.y, this.x + this.width, this.y + this.height, false);\n}'
-  },
-  {
-    name: 'draw_gui',
-    type: 'function',
-    description: 'Called each frame to render GUI elements. Use for HUD, score displays, etc.',
-    parameters: [],
-    returns: 'void',
-    example: 'playerObj.draw_gui = function() {\n  draw_set_color(c_white);\n  draw_text(10, 10, "Score: " + this.score);\n}'
-  },
-  
   // Object Creation Functions
   {
     name: 'object_add',
@@ -82,6 +32,16 @@ const engineKeywords = [
     parameters: [],
     returns: 'void',
     example: 'if(this.health <= 0) {\n  this.instance_destroy();\n}'
+  },
+  {
+    name: 'instance_exists',
+    type: 'function',
+    description: 'Checks if an instance exists in the game.',
+    parameters: [
+      { name: 'instance', type: 'object', description: 'The instance to check' }
+    ],
+    returns: 'boolean',
+    example: 'if(instance_exists(boss)) {\n  // Boss is still alive\n}'
   },
   
   // Drawing Functions
@@ -139,6 +99,20 @@ const engineKeywords = [
     example: 'draw_set_color(c_white);\ndraw_text(10, 10, "Score: " + score);'
   },
   {
+    name: 'draw_text_ext',
+    type: 'function',
+    description: 'Draws text with line wrapping at the specified position.',
+    parameters: [
+      { name: 'x', type: 'number', description: 'X position to draw the text' },
+      { name: 'y', type: 'number', description: 'Y position to draw the text' },
+      { name: 'text', type: 'string', description: 'The text to draw' },
+      { name: 'lineHeight', type: 'number', description: 'Height of each line in pixels' },
+      { name: 'maxWidth', type: 'number', description: 'Maximum width before wrapping text' }
+    ],
+    returns: 'void',
+    example: 'draw_text_ext(10, 10, "Long text that will wrap...", 24, 200);'
+  },
+  {
     name: 'draw_rectangle',
     type: 'function',
     description: 'Draws a rectangle with the specified coordinates.',
@@ -151,6 +125,348 @@ const engineKeywords = [
     ],
     returns: 'void',
     example: 'draw_set_color(c_blue);\ndraw_rectangle(this.x, this.y, this.x + 50, this.y + 50, false);'
+  },
+  {
+    name: 'draw_set_line_width',
+    type: 'function',
+    description: 'Sets the width of lines for subsequent drawing operations.',
+    parameters: [
+      { name: 'width', type: 'number', description: 'Line width in pixels' }
+    ],
+    returns: 'void',
+    example: 'draw_set_line_width(3);\ndraw_line(10, 10, 100, 100);'
+  },
+  {
+    name: 'draw_line',
+    type: 'function',
+    description: 'Draws a line between two points.',
+    parameters: [
+      { name: 'x1', type: 'number', description: 'X position of the first point' },
+      { name: 'y1', type: 'number', description: 'Y position of the first point' },
+      { name: 'x2', type: 'number', description: 'X position of the second point' },
+      { name: 'y2', type: 'number', description: 'Y position of the second point' }
+    ],
+    returns: 'void',
+    example: 'draw_set_color(c_white);\ndraw_line(0, 0, mouse_x, mouse_y);'
+  },
+  {
+    name: 'draw_circle',
+    type: 'function',
+    description: 'Draws a circle with the given radius.',
+    parameters: [
+      { name: 'x', type: 'number', description: 'X position of the center' },
+      { name: 'y', type: 'number', description: 'Y position of the center' },
+      { name: 'radius', type: 'number', description: 'Radius of the circle' },
+      { name: 'outline', type: 'boolean', description: 'True for outline, false for filled circle' }
+    ],
+    returns: 'void',
+    example: 'draw_set_color(c_yellow);\ndraw_circle(this.x, this.y, 32, false);'
+  },
+  {
+    name: 'draw_ellipse',
+    type: 'function',
+    description: 'Draws an ellipse with the given width and height.',
+    parameters: [
+      { name: 'x', type: 'number', description: 'X position of the center' },
+      { name: 'y', type: 'number', description: 'Y position of the center' },
+      { name: 'width', type: 'number', description: 'Width of the ellipse' },
+      { name: 'height', type: 'number', description: 'Height of the ellipse' },
+      { name: 'outline', type: 'boolean', description: 'True for outline, false for filled ellipse' }
+    ],
+    returns: 'void',
+    example: 'draw_set_color(c_green);\ndraw_ellipse(100, 100, 80, 40, true);'
+  },
+  {
+    name: 'draw_roundrect',
+    type: 'function',
+    description: 'Draws a rectangle with rounded corners.',
+    parameters: [
+      { name: 'x1', type: 'number', description: 'X position of the top-left corner' },
+      { name: 'y1', type: 'number', description: 'Y position of the top-left corner' },
+      { name: 'x2', type: 'number', description: 'X position of the bottom-right corner' },
+      { name: 'y2', type: 'number', description: 'Y position of the bottom-right corner' },
+      { name: 'radius', type: 'number', description: 'Radius of the rounded corners' },
+      { name: 'outline', type: 'boolean', description: 'True for outline, false for filled rectangle' }
+    ],
+    returns: 'void',
+    example: 'draw_set_color(c_blue);\ndraw_roundrect(20, 20, 120, 80, 15, false);'
+  },
+  {
+    name: 'draw_gradient_rect',
+    type: 'function',
+    description: 'Draws a rectangle with a color gradient.',
+    parameters: [
+      { name: 'x1', type: 'number', description: 'X position of the top-left corner' },
+      { name: 'y1', type: 'number', description: 'Y position of the top-left corner' },
+      { name: 'x2', type: 'number', description: 'X position of the bottom-right corner' },
+      { name: 'y2', type: 'number', description: 'Y position of the bottom-right corner' },
+      { name: 'color1', type: 'string', description: 'Start color of the gradient' },
+      { name: 'color2', type: 'string', description: 'End color of the gradient' },
+      { name: 'vertical', type: 'boolean', description: 'True for vertical gradient, false for horizontal' }
+    ],
+    returns: 'void',
+    example: 'draw_gradient_rect(0, 0, room_width, room_height, c_blue, c_black, true);'
+  },
+  {
+    name: 'draw_triangle',
+    type: 'function',
+    description: 'Draws a triangle between three points.',
+    parameters: [
+      { name: 'x1', type: 'number', description: 'X position of the first point' },
+      { name: 'y1', type: 'number', description: 'Y position of the first point' },
+      { name: 'x2', type: 'number', description: 'X position of the second point' },
+      { name: 'y2', type: 'number', description: 'Y position of the second point' },
+      { name: 'x3', type: 'number', description: 'X position of the third point' },
+      { name: 'y3', type: 'number', description: 'Y position of the third point' },
+      { name: 'outline', type: 'boolean', description: 'True for outline, false for filled triangle' }
+    ],
+    returns: 'void',
+    example: 'draw_set_color(c_red);\ndraw_triangle(100, 50, 150, 150, 50, 150, false);'
+  },
+  {
+    name: 'draw_sprite',
+    type: 'function',
+    description: 'Draws a sprite at the specified position.',
+    parameters: [
+      { name: 'sprite', type: 'sprite', description: 'The sprite to draw' },
+      { name: 'x', type: 'number', description: 'X position to draw the sprite' },
+      { name: 'y', type: 'number', description: 'Y position to draw the sprite' }
+    ],
+    returns: 'void',
+    example: 'draw_sprite(player_sprite, this.x, this.y);'
+  },
+  {
+    name: 'draw_sprite_ext',
+    type: 'function',
+    description: 'Draws a sprite with scaling, rotation, and transparency.',
+    parameters: [
+      { name: 'sprite', type: 'sprite', description: 'The sprite to draw' },
+      { name: 'x', type: 'number', description: 'X position to draw the sprite' },
+      { name: 'y', type: 'number', description: 'Y position to draw the sprite' },
+      { name: 'xscale', type: 'number', description: 'Horizontal scaling factor' },
+      { name: 'yscale', type: 'number', description: 'Vertical scaling factor' },
+      { name: 'rotation', type: 'number', description: 'Rotation angle in degrees' },
+      { name: 'alpha', type: 'number', description: 'Alpha transparency (0-1)' }
+    ],
+    returns: 'void',
+    example: 'draw_sprite_ext(player_sprite, this.x, this.y, 1.5, 1.5, this.angle, 0.8);'
+  },
+  {
+    name: 'draw_sprite_part',
+    type: 'function',
+    description: 'Draws a specific frame from a sprite sheet.',
+    parameters: [
+      { name: 'sprite', type: 'sprite', description: 'The sprite sheet to draw from' },
+      { name: 'frame', type: 'number', description: 'The frame number to draw' },
+      { name: 'x', type: 'number', description: 'X position to draw the sprite' },
+      { name: 'y', type: 'number', description: 'Y position to draw the sprite' },
+      { name: 'width', type: 'number', description: 'Width to draw the frame (optional)' },
+      { name: 'height', type: 'number', description: 'Height to draw the frame (optional)' }
+    ],
+    returns: 'void',
+    example: 'draw_sprite_part(character_sheet, this.animation_frame, this.x, this.y);'
+  },
+  
+  // Shape Drawing System
+  {
+    name: 'draw_shape_start',
+    type: 'function',
+    description: 'Starts drawing a custom shape from the specified position.',
+    parameters: [
+      { name: 'x', type: 'number', description: 'X position of the starting point' },
+      { name: 'y', type: 'number', description: 'Y position of the starting point' },
+      { name: 'outline', type: 'boolean', description: 'True for outline, false for filled shape (optional, default: true)' },
+      { name: 'spline', type: 'number', description: 'Spline tension factor, 0 for no spline (optional, default: 0)' }
+    ],
+    returns: 'boolean',
+    example: 'draw_shape_start(100, 100, false, 0.5); // Start a filled shape with spline smoothing'
+  },
+  {
+    name: 'draw_shape_point',
+    type: 'function',
+    description: 'Adds a point to the current shape being drawn.',
+    parameters: [
+      { name: 'x', type: 'number', description: 'X position of the point' },
+      { name: 'y', type: 'number', description: 'Y position of the point' }
+    ],
+    returns: 'boolean',
+    example: 'draw_shape_point(150, 50);\ndraw_shape_point(200, 100);\ndraw_shape_point(150, 150);'
+  },
+  {
+    name: 'draw_shape_end',
+    type: 'function',
+    description: 'Finishes and renders the custom shape.',
+    parameters: [
+      { name: 'closeShape', type: 'boolean', description: 'Whether to close the shape by connecting last point to first (optional, default: true)' }
+    ],
+    returns: 'boolean',
+    example: 'draw_shape_end(); // Draws the shape with all added points'
+  },
+  
+  // Surface Functions
+  {
+    name: 'surface_create',
+    type: 'function',
+    description: 'Creates a new drawing surface with the specified dimensions.',
+    parameters: [
+      { name: 'width', type: 'number', description: 'Width of the surface in pixels' },
+      { name: 'height', type: 'number', description: 'Height of the surface in pixels' }
+    ],
+    returns: 'surface',
+    example: 'const lightSurface = surface_create(room_width, room_height);'
+  },
+  {
+    name: 'surface_set_target',
+    type: 'function',
+    description: 'Sets the specified surface as the active drawing target.',
+    parameters: [
+      { name: 'surface', type: 'surface', description: 'The surface to set as the target' }
+    ],
+    returns: 'boolean',
+    example: 'surface_set_target(lightSurface);\ndraw_circle(100, 100, 50, false);\nsurface_reset_target();'
+  },
+  {
+    name: 'surface_reset_target',
+    type: 'function',
+    description: 'Resets the drawing target back to the previous surface or main canvas.',
+    parameters: [],
+    returns: 'boolean',
+    example: 'surface_set_target(effectSurface);\n// Draw effects here\nsurface_reset_target();'
+  },
+  {
+    name: 'surface_free',
+    type: 'function',
+    description: 'Releases the memory used by a surface.',
+    parameters: [
+      { name: 'surface', type: 'surface', description: 'The surface to free from memory' }
+    ],
+    returns: 'boolean',
+    example: 'if(surface_exists(tempSurface)) {\n  surface_free(tempSurface);\n}'
+  },
+  {
+    name: 'surface_exists',
+    type: 'function',
+    description: 'Checks if a surface is valid and exists.',
+    parameters: [
+      { name: 'surface', type: 'surface', description: 'The surface to check' }
+    ],
+    returns: 'boolean',
+    example: 'if(!surface_exists(lightSurface)) {\n  lightSurface = surface_create(room_width, room_height);\n}'
+  },
+  {
+    name: 'draw_surface',
+    type: 'function',
+    description: 'Draws a surface at the specified position.',
+    parameters: [
+      { name: 'surface', type: 'surface', description: 'The surface to draw' },
+      { name: 'x', type: 'number', description: 'X position to draw the surface' },
+      { name: 'y', type: 'number', description: 'Y position to draw the surface' },
+      { name: 'width', type: 'number', description: 'Width to draw the surface (optional)' },
+      { name: 'height', type: 'number', description: 'Height to draw the surface (optional)' }
+    ],
+    returns: 'boolean',
+    example: 'draw_surface(lightSurface, 0, 0);'
+  },
+  {
+    name: 'draw_surface_part',
+    type: 'function',
+    description: 'Draws a part of a surface.',
+    parameters: [
+      { name: 'surface', type: 'surface', description: 'The surface to draw from' },
+      { name: 'sx', type: 'number', description: 'X position in the source surface' },
+      { name: 'sy', type: 'number', description: 'Y position in the source surface' },
+      { name: 'sw', type: 'number', description: 'Width of the region in the source surface' },
+      { name: 'sh', type: 'number', description: 'Height of the region in the source surface' },
+      { name: 'x', type: 'number', description: 'X position to draw to' },
+      { name: 'y', type: 'number', description: 'Y position to draw to' },
+      { name: 'width', type: 'number', description: 'Width to draw (optional)' },
+      { name: 'height', type: 'number', description: 'Height to draw (optional)' }
+    ],
+    returns: 'boolean',
+    example: 'draw_surface_part(worldSurface, view_xview, view_yview, view_wview, view_hview, 0, 0);'
+  },
+  {
+    name: 'surface_clear',
+    type: 'function',
+    description: 'Clears a surface with a specific color.',
+    parameters: [
+      { name: 'surface', type: 'surface', description: 'The surface to clear' },
+      { name: 'color', type: 'string', description: 'The color to fill with (optional)' }
+    ],
+    returns: 'boolean',
+    example: 'surface_clear(lightSurface, c_black);'
+  },
+  {
+    name: 'surface_save',
+    type: 'function',
+    description: 'Saves a surface as an image file.',
+    parameters: [
+      { name: 'surface', type: 'surface', description: 'The surface to save' },
+      { name: 'filename', type: 'string', description: 'Filename to save as (optional)' }
+    ],
+    returns: 'boolean',
+    example: 'surface_save(screenSurface, "screenshot.png");'
+  },
+  {
+    name: 'surface_getpixel',
+    type: 'function',
+    description: 'Gets the color of a pixel from a surface.',
+    parameters: [
+      { name: 'surface', type: 'surface', description: 'The surface to get the pixel from' },
+      { name: 'x', type: 'number', description: 'X position of the pixel' },
+      { name: 'y', type: 'number', description: 'Y position of the pixel' }
+    ],
+    returns: 'object',
+    example: 'const pixelColor = surface_getpixel(worldSurface, mouse_x, mouse_y);'
+  },
+  {
+    name: 'surface_copy',
+    type: 'function',
+    description: 'Copies content from one surface to another.',
+    parameters: [
+      { name: 'targetSurface', type: 'surface', description: 'The surface to copy to' },
+      { name: 'x', type: 'number', description: 'X position in the target surface' },
+      { name: 'y', type: 'number', description: 'Y position in the target surface' },
+      { name: 'sourceSurface', type: 'surface', description: 'The surface to copy from' }
+    ],
+    returns: 'boolean',
+    example: 'surface_copy(backupSurface, 0, 0, mainSurface);'
+  },
+  
+  // Blend Modes
+  {
+    name: 'surface_set_blendmode',
+    type: 'function',
+    description: 'Sets the current blend mode for subsequent drawing operations.',
+    parameters: [
+      { name: 'mode', type: 'string', description: 'Blend mode to use (e.g., bm_normal, bm_add)' }
+    ],
+    returns: 'boolean',
+    example: 'surface_set_blendmode(bm_add);\ndraw_surface(lightSurface, 0, 0);\nsurface_set_blendmode_normal();'
+  },
+  {
+    name: 'surface_set_blendmode_normal',
+    type: 'function',
+    description: 'Resets the blend mode to normal (source-over).',
+    parameters: [],
+    returns: 'void',
+    example: 'surface_set_blendmode_normal();'
+  },
+  {
+    name: 'surface_set_blendmode_add',
+    type: 'function',
+    description: 'Sets the blend mode to additive.',
+    parameters: [],
+    returns: 'void',
+    example: 'surface_set_blendmode_add();\ndraw_surface(lightSurface, 0, 0);\nsurface_set_blendmode_normal();'
+  },
+  {
+    name: 'surface_set_blendmode_subtract',
+    type: 'function',
+    description: 'Sets the blend mode to subtractive.',
+    parameters: [],
+    returns: 'void',
+    example: 'surface_set_blendmode_subtract();\ndraw_surface(shadowSurface, 0, 0);\nsurface_set_blendmode_normal();'
   },
   
   // Math Utility Functions
@@ -167,294 +483,75 @@ const engineKeywords = [
     returns: 'number',
     example: 'const dist = point_distance(player.x, player.y, enemy.x, enemy.y);\nif(dist < 100) {\n  // Enemy is close to player\n}'
   },
+  
+  // Random Functions
   {
-    name: 'point_direction',
+    name: 'random',
     type: 'function',
-    description: 'Calculates the direction (angle in degrees) from one point to another.',
+    description: 'Returns a random float number between 0 and the specified value.',
     parameters: [
-      { name: 'x1', type: 'number', description: 'X position of the first point' },
-      { name: 'y1', type: 'number', description: 'Y position of the first point' },
-      { name: 'x2', type: 'number', description: 'X position of the second point' },
-      { name: 'y2', type: 'number', description: 'Y position of the second point' }
+      { name: 'max', type: 'number', description: 'Maximum value (exclusive)' }
     ],
     returns: 'number',
-    example: 'const dir = point_direction(this.x, this.y, mouse_x, mouse_y);\nthis.motion_set(dir, 5);'
+    example: 'const speed = 2 + random(3); // Random value between 2 and 5'
   },
   {
-    name: 'lengthdir_x',
+    name: 'random_range',
     type: 'function',
-    description: 'Returns the horizontal component of a vector with the given length and direction.',
+    description: 'Returns a random float number between the specified min and max values.',
     parameters: [
-      { name: 'length', type: 'number', description: 'Length of the vector' },
-      { name: 'direction', type: 'number', description: 'Direction in degrees' }
+      { name: 'min', type: 'number', description: 'Minimum value (inclusive)' },
+      { name: 'max', type: 'number', description: 'Maximum value (exclusive)' }
     ],
     returns: 'number',
-    example: 'const bulletSpeed = 10;\nconst xSpeed = lengthdir_x(bulletSpeed, this.direction);'
+    example: 'const enemySize = random_range(0.8, 1.5);'
   },
   {
-    name: 'lengthdir_y',
+    name: 'irandom',
     type: 'function',
-    description: 'Returns the vertical component of a vector with the given length and direction.',
+    description: 'Returns a random integer between 0 and the specified value.',
     parameters: [
-      { name: 'length', type: 'number', description: 'Length of the vector' },
-      { name: 'direction', type: 'number', description: 'Direction in degrees' }
+      { name: 'max', type: 'number', description: 'Maximum value (inclusive)' }
     ],
     returns: 'number',
-    example: 'const bulletSpeed = 10;\nconst ySpeed = lengthdir_y(bulletSpeed, this.direction);'
+    example: 'const coins = irandom(5); // 0-5 coins'
   },
   {
-    name: 'floor',
+    name: 'irandom_range',
     type: 'function',
-    description: 'Returns the largest integer less than or equal to the given number.',
+    description: 'Returns a random integer between the specified min and max values.',
     parameters: [
-      { name: 'x', type: 'number', description: 'The number to floor' }
+      { name: 'min', type: 'number', description: 'Minimum value (inclusive)' },
+      { name: 'max', type: 'number', description: 'Maximum value (inclusive)' }
     ],
     returns: 'number',
-    example: 'const gridX = floor(this.x / gridSize);'
-  },
-  {
-    name: 'ceil',
-    type: 'function',
-    description: 'Returns the smallest integer greater than or equal to the given number.',
-    parameters: [
-      { name: 'x', type: 'number', description: 'The number to ceil' }
-    ],
-    returns: 'number',
-    example: 'const requiredItems = ceil(totalCost / itemValue);'
-  },
-  {
-    name: 'round',
-    type: 'function',
-    description: 'Rounds a number to the nearest integer.',
-    parameters: [
-      { name: 'x', type: 'number', description: 'The number to round' }
-    ],
-    returns: 'number',
-    example: 'const displayHealth = round(this.health);'
-  },
-  {
-    name: 'clamp',
-    type: 'function',
-    description: 'Constrains a value between a minimum and maximum value.',
-    parameters: [
-      { name: 'value', type: 'number', description: 'The value to constrain' },
-      { name: 'min', type: 'number', description: 'The minimum allowed value' },
-      { name: 'max', type: 'number', description: 'The maximum allowed value' }
-    ],
-    returns: 'number',
-    example: 'this.x = clamp(this.x, 0, room_width - this.width);'
-  },
-  {
-    name: 'keyboard_check',
-    type: 'function',
-    description: 'Checks if a key is currently being pressed.',
-    parameters: [
-      { name: 'key', type: 'number', description: 'The key code to check' }
-    ],
-    returns: 'boolean',
-    example: 'if(keyboard_check(65)) { // "A" key\n  this.x -= 5;\n}'
+    example: 'const damage = irandom_range(5, 10); // 5-10 damage'
   },
   
-  // Object Methods
+  // Blend Mode Constants
   {
-    name: 'checkCollision',
-    type: 'function',
-    description: 'Checks if this object is colliding with another object.',
-    parameters: [
-      { name: 'other', type: 'object', description: 'The other object to check collision with' }
-    ],
-    returns: 'boolean',
-    example: 'if(this.checkCollision(enemy)) {\n  this.health -= 10;\n}'
-  },
-  {
-    name: 'motion_set',
-    type: 'function',
-    description: 'Sets the direction and speed of an object.',
-    parameters: [
-      { name: 'direction', type: 'number', description: 'The direction in degrees' },
-      { name: 'speed', type: 'number', description: 'The speed value' }
-    ],
-    returns: 'void',
-    example: 'this.motion_set(90, 5); // Move upward at speed 5'
-  },
-  {
-    name: 'motion_add',
-    type: 'function',
-    description: 'Adds the given speed in the specified direction.',
-    parameters: [
-      { name: 'direction', type: 'number', description: 'The direction in degrees' },
-      { name: 'speed', type: 'number', description: 'The speed to add' }
-    ],
-    returns: 'void',
-    example: 'this.motion_add(270, 0.5); // Add gravity'
-  },
-  
-  // Game Global Variables
-  {
-    name: 'room_width',
-    type: 'variable',
-    description: 'The width of the game room.',
-    example: 'if(this.x > room_width) {\n  this.x = 0;\n}'
-  },
-  {
-    name: 'room_height',
-    type: 'variable',
-    description: 'The height of the game room.',
-    example: 'if(this.y > room_height) {\n  this.y = 0;\n}'
-  },
-  {
-    name: 'mouse_x',
-    type: 'variable',
-    description: 'Current X position of the mouse in game coordinates.',
-    example: 'const dir = point_direction(this.x, this.y, mouse_x, mouse_y);'
-  },
-  {
-    name: 'mouse_y',
-    type: 'variable',
-    description: 'Current Y position of the mouse in game coordinates.',
-    example: 'const dir = point_direction(this.x, this.y, mouse_x, mouse_y);'
-  },
-  
-  // Object Properties
-  {
-    name: 'x',
-    type: 'property',
-    description: 'The X position of the object.',
-    example: 'this.x += this.speed;'
-  },
-  {
-    name: 'y',
-    type: 'property',
-    description: 'The Y position of the object.',
-    example: 'this.y += this.vspeed;'
-  },
-  {
-    name: 'width',
-    type: 'property',
-    description: 'The width of the object.',
-    example: 'this.width = 32;'
-  },
-  {
-    name: 'height',
-    type: 'property',
-    description: 'The height of the object.',
-    example: 'this.height = 32;'
-  },
-  {
-    name: 'speed',
-    type: 'property',
-    description: 'The overall speed of the object.',
-    example: 'this.speed = 5;'
-  },
-  {
-    name: 'direction',
-    type: 'property',
-    description: 'The movement direction in degrees (0-360).',
-    example: 'this.direction = 90; // Move upward'
-  },
-  {
-    name: 'hspeed',
-    type: 'property',
-    description: 'The horizontal speed component.',
-    example: 'this.hspeed = 3; // Move right'
-  },
-  {
-    name: 'vspeed',
-    type: 'property',
-    description: 'The vertical speed component.',
-    example: 'this.vspeed = -4; // Move up'
-  },
-  {
-    name: 'friction',
-    type: 'property',
-    description: 'The amount of friction applied to slow movement.',
-    example: 'this.friction = 0.05; // Slow down gradually'
-  },
-  {
-    name: 'gravity',
-    type: 'property',
-    description: 'The force of gravity applied to the object.',
-    example: 'this.gravity = 0.2; // Apply gravity'
-  },
-  {
-    name: 'gravity_direction',
-    type: 'property',
-    description: 'The direction in which gravity pulls (default 270, down).',
-    example: 'this.gravity_direction = 270; // Pull downward'
-  },
-  {
-    name: 'depth',
-    type: 'property',
-    description: 'The drawing depth/layer. Higher values are drawn first (behind lower values).',
-    example: 'this.depth = 100; // Draw behind objects with depth < 100'
-  },
-  {
-    name: 'visible',
-    type: 'property',
-    description: 'Controls if the object is drawn.',
-    example: 'this.visible = false; // Make invisible'
-  },
-  {
-    name: 'active',
-    type: 'property',
-    description: 'Controls if the object is updated.',
-    example: 'this.active = false; // Pause object\'s logic'
-  },
-  
-  // Color Constants
-  {
-    name: 'c_white',
+    name: 'bm_normal',
     type: 'constant',
-    description: 'White color: rgb(255, 255, 255)',
-    example: 'draw_set_color(c_white);'
+    description: 'Normal blend mode (source-over)',
+    example: 'surface_set_blendmode(bm_normal);'
   },
   {
-    name: 'c_black',
+    name: 'bm_add',
     type: 'constant',
-    description: 'Black color: rgb(0, 0, 0)',
-    example: 'draw_set_color(c_black);'
+    description: 'Additive blend mode (lighter)',
+    example: 'surface_set_blendmode(bm_add);'
   },
   {
-    name: 'c_red',
+    name: 'bm_subtract',
     type: 'constant',
-    description: 'Red color: rgb(255, 0, 0)',
-    example: 'draw_set_color(c_red);'
+    description: 'Subtractive blend mode (difference)',
+    example: 'surface_set_blendmode(bm_subtract);'
   },
   {
-    name: 'c_blue',
+    name: 'bm_multiply',
     type: 'constant',
-    description: 'Blue color: rgb(0, 0, 255)',
-    example: 'draw_set_color(c_blue);'
-  },
-  {
-    name: 'c_green',
-    type: 'constant',
-    description: 'Green color: rgb(0, 255, 0)',
-    example: 'draw_set_color(c_green);'
-  },
-  {
-    name: 'c_yellow',
-    type: 'constant',
-    description: 'Yellow color: rgb(255, 255, 0)',
-    example: 'draw_set_color(c_yellow);'
-  },
-  {
-    name: 'c_gray',
-    type: 'constant',
-    description: 'Gray color: rgb(128, 128, 128)',
-    example: 'draw_set_color(c_gray);'
-  },
-  {
-    name: 'c_ltgray',
-    type: 'constant',
-    description: 'Light gray color: rgb(176, 176, 176)',
-    example: 'draw_set_color(c_ltgray);'
-  },
-  {
-    name: 'c_dkgray',
-    type: 'constant',
-    description: 'Dark gray color: rgb(64, 64, 64)',
-    example: 'draw_set_color(c_dkgray);'
+    description: 'Multiply blend mode',
+    example: 'surface_set_blendmode(bm_multiply);'
   }
 ];
 

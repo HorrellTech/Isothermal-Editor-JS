@@ -457,6 +457,16 @@ const LevelEditor = (function() {
             const closeBtn = modal.querySelector('.close-modal-btn');
             const cancelBtn = modal.querySelector('.cancel-btn');
             const applyBtn = modal.querySelector('.apply-btn');
+
+            if (window.CodeHintSystem) {
+                CodeHintSystem.init(setupCodeEditor);
+            }
+
+            setupCodeEditor.on("inputRead", function(editor, change) {
+                if (window.CodeHintSystem) {
+                    CodeHintSystem.updateHints();
+                }
+            });
             
             // Close modal function
             const closeModal = () => {

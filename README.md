@@ -125,9 +125,9 @@ physics.gravity = 0.5;
 physics.friction = 0.1;
 
 // Use the module in other events
-const physics = this.module_get("physics");
-if (physics) {
-    physics.vx = 5; // Move right
+const phy = this.module_get("physics");
+if (phy) {
+    phy.vx = 5; // Move right
 }
 ```
 
@@ -143,7 +143,7 @@ if (physics) {
  - **create_inventory_module():** Basic inventory management
  - **create_weather_module():** Dynamic weather effects
 
- # 🛠️ Project Structure
+ ## 🛠️ Project Structure
  - **Game Objects:** Define behaviors and properties
  - **Folders:** Organize your game objects
  - **Levels:** Design game levels with object placement

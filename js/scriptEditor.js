@@ -56,11 +56,17 @@ const ScriptEditor = (function() {
                 "Ctrl-Space": "autocomplete"
             }
         });
+
+        CodeHintSystem.init(scriptEditor);
         
         // Enable auto-completion for script editor
         scriptEditor.on("inputRead", function(editor, change) {
             if (change.origin !== "+input") return;
             if (change.text.length > 1 && change.text[0] !== ".") return;
+
+            if (window.CodeHintSystem) {
+                CodeHintSystem.updateHints();
+            }
             
             const hasPoint = change.text[0] === ".";
             
@@ -92,6 +98,10 @@ const ScriptEditor = (function() {
         
         // Render the initial UI
         renderScriptsList();
+
+        if (window.CodeHintSystem) {
+            CodeHintSystem.init(scriptEditor);
+        }
     }
     
     /**
@@ -577,7 +587,10 @@ function util_lerp(a, b, t) {
         getScriptsData,
         refresh,
         addScript,
-        addFolder
+        addFolder,
+        getEditor: function() {
+            return scriptEditor;
+        }
     };
 })();
 

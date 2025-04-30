@@ -81,22 +81,108 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     });
 
+    // Initialize code hint system with improved timing and error handling
+    if (window.CodeHintSystem) {
+        const initCodeHints = function(maxAttempts = 10) {
+            let attempts = 0;
+            
+            const tryInit = function() {
+                attempts++;
+                console.log(`Initializing code hints (attempt ${attempts})`);
+                
+                if (!editor) {
+                    if (attempts < maxAttempts) {
+                        console.warn("CodeMirror editor not ready yet, retrying...");
+                        setTimeout(tryInit, 200);
+                    } else {
+                        console.error("Failed to initialize code hints: Editor not available");
+                    }
+                    return;
+                }
+                
+                try {
+                    const codeHintSystem = CodeHintSystem.init(editor);
+                    
+                    if (codeHintSystem) {
+                        console.log("Code hint system initialized successfully");
+                        // Make it globally available if needed
+                        window.codeHintSystem = codeHintSystem;
+                    } else {
+                        console.error("Failed to initialize code hints: init returned null");
+                    }
+                } catch (err) {
+                    console.error("Error initializing code hints:", err);
+                }
+            };
+            
+            // Start initialization
+            setTimeout(tryInit, 200);
+        };
+        
+        // Call the initialization function
+        initCodeHints();
+    } else {
+        console.error("CodeHintSystem not found! Make sure codeHintSystem.js is loaded correctly.");
+    }
+
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (btn.getAttribute('data-tab') === 'objects' || btn.getAttribute('data-tab') === 'scripts') {
+                // Refresh code hints when switching to an editor tab
+                if (window.codeHintSystem) {
+                    window.codeHintSystem.refresh();
+                }
+            }
+        });
+    });
+
+    function limitCodeMirrorHeight() {
+        const cmElements = document.querySelectorAll('.CodeMirror');
+        cmElements.forEach(cm => {
+            cm.style.maxHeight = '500px'; // Adjust this value as needed
+            cm.style.height = 'auto';
+        });
+    }
+
     // Enable auto-completion while typing
     editor.on("inputRead", function(editor, change) {
-        if (change.origin !== "+input") return;
-        // Don't show hints when there's more than one character deleted or replaced
-        if (change.text.length > 1 && change.text[0] !== ".") return;
-        
-        const hasPoint = change.text[0] === ".";
-        
-        // Show autocomplete after a dot or when typing a keyword
-        if (hasPoint || /[\w]/.test(change.text[0])) {
-            editor.showHint({
-                completeSingle: false,
-                alignWithWord: true
-            });
+        if (window.CodeHintSystem) {
+            window.CodeHintSystem.updateHints();
         }
     });
+
+    editor.on("keyup", function(editor, event) {
+        if (window.CodeHintSystem) {
+            // Immediately update hints when pressing keys
+            window.CodeHintSystem.updateHints();
+        }
+    });
+
+    setTimeout(() => {
+        // Fix positioning of CodeMirror container
+        const cmContainer = editor.getWrapperElement().parentNode;
+        if (cmContainer) {
+            cmContainer.style.position = 'relative';
+        }
+        
+        // Force an update of the hint panel
+        if (window.CodeHintSystem) {
+            window.CodeHintSystem.updateHints();
+        }
+    }, 100);
+
+    // Add code hint system to object editor
+    const objectEditorHints = CodeHintSystem.init(editor);
+
+    // Also add to script editor if available
+    if (window.ScriptEditor && window.ScriptEditor.getEditor) {
+        setTimeout(() => {
+            const scriptEditor = window.ScriptEditor.getEditor();
+            if (scriptEditor) {
+                const scriptEditorHints = CodeHintSystem.init(scriptEditor);
+            }
+        }, 500); // Delay to ensure script editor is fully initialized
+    }
 
     // Tab system
     const tabButtons = document.querySelectorAll('.tab-btn');
@@ -130,6 +216,16 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 console.error(`Tab pane with id "${tabId}" not found`);
             }
+
+            // Refresh CodeMirror editors when switching tabs
+            setTimeout(() => {
+                if (editor) editor.refresh();
+                if (window.ScriptEditor && window.ScriptEditor.getEditor) {
+                    const scriptEditor = window.ScriptEditor.getEditor();
+                    if (scriptEditor) scriptEditor.refresh();
+                }
+                limitCodeMirrorHeight();
+            }, 10);
         });
     });
     
@@ -686,60 +782,6 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('keyup', (e) => {
         keyStates[e.keyCode] = false;
     });
-    
-    // Add game engine globals to the window
-    window.object_add = function() { return game.object_add(); };
-    window.instance_create = function(x, y, obj) { return game.instance_create(x, y, obj); };
-    window.draw_set_color = function(color) { return game.draw_set_color(color); };
-    window.draw_rectangle = function(x1, y1, x2, y2, outline) { return game.draw_rectangle(x1, y1, x2, y2, outline); };
-    window.draw_text = function(x, y, text) { return game.draw_text(x, y, text); };
-    window.point_distance = function(x1, y1, x2, y2) { return game.point_distance(x1, y1, x2, y2); };
-    window.point_direction = function(x1, y1, x2, y2) { return game.point_direction(x1, y1, x2, y2); };
-    window.lengthdir_x = function(len, dir) { return game.lengthdir_x(len, dir); };
-    window.lengthdir_y = function(len, dir) { return game.lengthdir_y(len, dir); };
-    window.floor = game.floor;
-    window.ceil = game.ceil;
-    window.round = game.round;
-    
-    // Game state variables
-    Object.defineProperty(window, 'room_width', {
-        get: function() { return game.room_width; },
-        set: function(value) { game.room_width = value; }
-    });
-    
-    Object.defineProperty(window, 'room_height', {
-        get: function() { return game.room_height; },
-        set: function(value) { game.room_height = value; }
-    });
-    
-    Object.defineProperty(window, 'mouse_x', {
-        get: function() { return game.mouse_x; }
-    });
-    
-    Object.defineProperty(window, 'mouse_y', {
-        get: function() { return game.mouse_y; }
-    });
-    
-    // Color constants
-    window.c_white = game.c_white;
-    window.c_black = game.c_black;
-    window.c_red = game.c_red;
-    window.c_blue = game.rgb(0, 0, 255);
-    window.c_green = game.rgb(0, 255, 0);
-    window.c_yellow = game.rgb(255, 255, 0);
-    window.c_gray = game.c_gray;
-    window.c_ltgray = game.c_ltgray;
-    window.c_dkgray = game.c_dkgray;
-    
-    // Add keyboard_check function to the global scope
-    window.keyboard_check = function(keyCode) {
-        return keyStates[keyCode] === true;
-    };
-    
-    // Add clamp function
-    window.clamp = function(value, min, max) {
-        return Math.min(Math.max(value, min), max);
-    };
 
     // Play and stop functionality
     const playBtn = document.getElementById('playBtn');
@@ -781,11 +823,52 @@ document.addEventListener('DOMContentLoaded', () => {
             game.room_height = height;
             game.view_wview = width;
             game.view_hview = height;
+            
+            // IMPORTANT: Manually make sure engine is available to window
+            window.engine = game;
+
+            // Ensure global functions are registered
+            if (typeof window_global_functions === 'function') {
+                window_global_functions();
+            }
         }
+
+        window_global_functions();
         
         // Apply screen fit
         applyScreenFitToCanvas();
-    
+
+         // This ensures they're available even if window-global-functions.js has issues
+        window.object_add = function() { return window.engine.object_add(); };
+        window.instance_create = function(x, y, object) { return window.engine.instance_create(x, y, object); };
+        window.keyboard_check = function(keyCode) { return keyStates[keyCode] === true; };
+        window.keyboard_check_pressed = function(keyCode) { return window.engine.keyboard_check_pressed(keyCode); };
+        window.draw_set_color = function(color) { return window.engine.draw_set_color(color); };
+        window.draw_rectangle = function(x1, y1, x2, y2, outline) { return window.engine.draw_rectangle(x1, y1, x2, y2, outline); };
+        window.draw_text = function(x, y, text) { return window.engine.draw_text(x, y, text); };
+        
+        // Copy basic constants
+        window.c_white = window.engine.c_white;
+        window.c_black = window.engine.c_black;
+        window.c_red = window.engine.c_red;
+        window.c_blue = window.engine.c_blue;
+        window.c_green = window.engine.c_green;
+        window.c_yellow = window.engine.c_yellow;
+        window.c_gray = window.engine.c_gray;
+        window.c_ltgray = window.engine.c_ltgray;
+        window.c_dkgray = window.engine.c_dkgray;
+        
+        // Key constants
+        window.vk_left = window.engine.vk_left;
+        window.vk_right = window.engine.vk_right;
+        window.vk_up = window.engine.vk_up;
+        window.vk_down = window.engine.vk_down;
+        window.vk_space = window.engine.vk_space;
+        
+        // Room properties
+        window.room_width = window.engine.room_width;
+        window.room_height = window.engine.room_height;
+
         // Generate resource code
         const resourcesCode = generateResourcesCode();
         gameCode += resourcesCode;
@@ -839,6 +922,11 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Start the game
         game.gameRestartEval();
+
+        // Ensure global functions are registered
+        if (typeof window_global_functions === 'function') {
+            window_global_functions();
+        }
         
         // Update button states
         playBtn.disabled = true;
@@ -2000,9 +2088,9 @@ if (!physics || !platformer) return;
 // Handle input for player movement
 let moveInput = 0;
 
-if (engine.keyboard_check(engine.vk_left) || engine.keyboard_check(65)) { // Left arrow or A
+if (keyboard_check(vk_left) || keyboard_check(65)) { // Left arrow or A
     moveInput = -1;
-} else if (engine.keyboard_check(engine.vk_right) || engine.keyboard_check(68)) { // Right arrow or D
+} else if (keyboard_check(vk_right) || keyboard_check(68)) { // Right arrow or D
     moveInput = 1;
 }
 
@@ -2010,8 +2098,8 @@ if (engine.keyboard_check(engine.vk_left) || engine.keyboard_check(65)) { // Lef
 platformer.set_move_input(moveInput);
 
 // Handle jump input
-const jumpPressed = engine.keyboard_check_pressed(engine.vk_space) 
-|| engine.keyboard_check_pressed(engine.vk_up) || engine.keyboard_check_pressed(87); // Space, Up arrow or W
+const jumpPressed = keyboard_check_pressed(vk_space) 
+|| keyboard_check_pressed(vk_up) || keyboard_check_pressed(87); // Space, Up arrow or W
 platformer.set_jump_input(jumpPressed);
 
 // Handle collisions with enemies
@@ -2259,6 +2347,9 @@ window.instance_position = function(x, y, object) {
     initializeLevelEditor();
     
     initializeScriptEditor();
+
+    // Also call it on initial load
+    limitCodeMirrorHeight();
 
     window.resources = resources;
     window.resourceTypes = resourceTypes;
