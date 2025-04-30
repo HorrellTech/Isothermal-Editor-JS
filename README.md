@@ -1,8 +1,6 @@
 # Isothermal-JS
 
-## A Web-Based Game Creation Toolkit
-
-[![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+## A Web-Based Game Creation Tool
 [![JavaScript](https://img.shields.io/badge/Language-JavaScript-yellow.svg)](https://www.javascript.com/)
 [![HTML5](https://img.shields.io/badge/Platform-HTML5-orange.svg)](https://developer.mozilla.org/en-US/docs/Web/Guide/HTML/HTML5)
 
@@ -33,7 +31,7 @@ Isothermal-JS is a lightweight, browser-based game creation toolkit that lets yo
 
 The easiest way to get started is to use the online version of Isothermal-JS:
 
-[Launch Isothermal-JS Online](https://yourwebsite.com/isothermal)
+[Launch Isothermal-JS Online](https://horrelltech.github.io/Isothermal-Editor-JS/)
 
 ### Local Installation
 
