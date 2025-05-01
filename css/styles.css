@@ -2597,3 +2597,17 @@ li.CodeMirror-hint-active {
     flex: 1;
     overflow: hidden;
 }
+
+.CodeMirror {
+    height: 500px !important;
+    overflow: auto !important;
+}
+
+.code-hint-container {
+    position: absolute;
+    bottom: -150px; /* Position below editor instead of overlapping */
+    width: 100%;
+    z-index: 5;
+    background-color: #1e1e1e;
+    border-top: 1px solid #444;
+}

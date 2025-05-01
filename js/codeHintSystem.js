@@ -23,21 +23,23 @@ const CodeHintSystem = (function() {
         
         // Prevent multiple initializations on the same editor
         if (editor._hintSystemInitialized) {
+            console.log("Editor already has hint system initialized, returning API");
             return {
-                refresh: () => updateHints(),
-                resize: (height) => setPanelHeight(height),
-                hide: () => { 
+                refresh: function() { updateHints(); },
+                resize: function(height) { setPanelHeight(height); },
+                hide: function() { 
                     const container = editor.getWrapperElement().nextElementSibling;
                     if (container && container.classList.contains('code-hint-container')) {
                         container.style.display = 'none';
                     }
                 },
-                show: () => {
+                show: function() {
                     const container = editor.getWrapperElement().nextElementSibling;
                     if (container && container.classList.contains('code-hint-container')) {
                         container.style.display = 'block';
                     }
-                }
+                },
+                updateHints: updateHints  // Explicitly expose updateHints
             };
         }
         
@@ -73,11 +75,17 @@ const CodeHintSystem = (function() {
         // Show welcome message
         showWelcomeMessage();
         
+        // Return API object
         return {
-            refresh: updateHints,
-            resize: setPanelHeight,
-            hide: () => { panelContainer.style.display = 'none'; },
-            show: () => { panelContainer.style.display = 'block'; }
+            refresh: function() { updateHints(); },
+            resize: function(height) { setPanelHeight(height); },
+            hide: function() { 
+                if (panelContainer) panelContainer.style.display = 'none'; 
+            },
+            show: function() { 
+                if (panelContainer) panelContainer.style.display = 'block'; 
+            },
+            updateHints: updateHints  // Explicitly expose updateHints
         };
     }
     

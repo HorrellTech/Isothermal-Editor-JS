@@ -101,12 +101,29 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 
                 try {
-                    const codeHintSystem = CodeHintSystem.init(editor);
+                    // Initialize the code hint system and store the returned API
+                    const hintSystem = window.CodeHintSystem.init(editor);
                     
-                    if (codeHintSystem) {
+                    // Store the API consistently at the window level
+                    window.codeHintSystem = hintSystem;
+                    
+                    if (window.codeHintSystem) {
                         console.log("Code hint system initialized successfully");
-                        // Make it globally available if needed
-                        window.codeHintSystem = codeHintSystem;
+                        
+                        // Apply proper sizing to code mirror and hint box
+                        limitCodeMirrorHeight();
+                        
+                        // Force initial refresh of hints
+                        if (typeof window.codeHintSystem.refresh === 'function') {
+                            window.codeHintSystem.refresh();
+                        }
+                        
+                        // Ensure the hint panel is properly sized
+                        const hintPanel = document.querySelector('.CodeMirror-hints');
+                        if (hintPanel) {
+                            hintPanel.style.maxHeight = '200px';
+                            hintPanel.style.overflowY = 'auto';
+                        }
                     } else {
                         console.error("Failed to initialize code hints: init returned null");
                     }
@@ -129,9 +146,12 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('click', () => {
             if (btn.getAttribute('data-tab') === 'objects' || btn.getAttribute('data-tab') === 'scripts') {
                 // Refresh code hints when switching to an editor tab
-                if (window.codeHintSystem) {
+                if (window.codeHintSystem && typeof window.codeHintSystem.refresh === 'function') {
                     window.codeHintSystem.refresh();
                 }
+                
+                // Also ensure proper sizing
+                setTimeout(limitCodeMirrorHeight, 10);
             }
         });
     });
@@ -140,21 +160,42 @@ document.addEventListener('DOMContentLoaded', () => {
         const cmElements = document.querySelectorAll('.CodeMirror');
         cmElements.forEach(cm => {
             cm.style.maxHeight = '500px'; // Adjust this value as needed
-            cm.style.height = 'auto';
+            cm.style.height = '500px';    // Set an explicit height instead of 'auto'
+            cm.style.overflow = 'auto';   // Ensure overflow is set to auto
+            
+            // Make sure CodeMirror recalculates its layout
+            const cmInstance = cm.CodeMirror;
+            if (cmInstance && typeof cmInstance.refresh === 'function') {
+                cmInstance.refresh();
+            }
+        });
+        
+        // Also resize hint panels if they exist
+        const hintPanels = document.querySelectorAll('.CodeMirror-hints');
+        hintPanels.forEach(panel => {
+            panel.style.maxHeight = '200px';
+            panel.style.overflowY = 'auto';
         });
     }
 
-    // Enable auto-completion while typing
+    // Fix event listeners for updating hints while typing
     editor.on("inputRead", function(editor, change) {
-        if (window.CodeHintSystem) {
-            window.CodeHintSystem.updateHints();
+        if (window.codeHintSystem && typeof window.codeHintSystem.refresh === 'function') {
+            window.codeHintSystem.refresh();
         }
     });
 
     editor.on("keyup", function(editor, event) {
-        if (window.CodeHintSystem) {
+        if (window.codeHintSystem && typeof window.codeHintSystem.refresh === 'function') {
             // Immediately update hints when pressing keys
-            window.CodeHintSystem.updateHints();
+            window.codeHintSystem.refresh();
+        }
+    });
+    
+    // Also respond to cursor movement
+    editor.on("cursorActivity", function(editor) {
+        if (window.codeHintSystem && typeof window.codeHintSystem.refresh === 'function') {
+            window.codeHintSystem.refresh();
         }
     });
 
@@ -163,16 +204,30 @@ document.addEventListener('DOMContentLoaded', () => {
         const cmContainer = editor.getWrapperElement().parentNode;
         if (cmContainer) {
             cmContainer.style.position = 'relative';
+            cmContainer.style.height = '500px'; // Explicit height
+            cmContainer.style.overflow = 'hidden'; // Let CodeMirror handle scrolling
         }
         
         // Force an update of the hint panel
-        if (window.CodeHintSystem) {
-            window.CodeHintSystem.updateHints();
+        if (window.codeHintSystem && typeof window.codeHintSystem.refresh === 'function') {
+            window.codeHintSystem.refresh();
         }
+        
+        // Ensure proper sizing
+        limitCodeMirrorHeight();
+        
+        // Force CodeMirror to recalculate its layout
+        editor.refresh();
     }, 100);
 
     // Add code hint system to object editor
-    const objectEditorHints = CodeHintSystem.init(editor);
+    if (!window.codeHintSystem) {
+        const objectEditorHints = CodeHintSystem.init(editor);
+        window.codeHintSystem = objectEditorHints;
+    }
+    else {
+        console.warn("Code hint system already initialized, skipping re-initialization.");
+    }
 
     // Also add to script editor if available
     if (window.ScriptEditor && window.ScriptEditor.getEditor) {
