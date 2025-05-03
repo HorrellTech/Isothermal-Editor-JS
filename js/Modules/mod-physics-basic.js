@@ -250,19 +250,19 @@ function create_physics_module() {
 
 // Add the function to the engine
 (function() {
+    // Direct assignment to window (critical for GitHub Pages)
+    window.create_physics_module = create_physics_module;
+    
     // Try to register directly if window.engine exists
     if (window.engine) {
-        window.engine['create_physics_module'] = create_physics_module;
+        window.engine.create_physics_module = create_physics_module;
         console.log('Physics module registered directly to engine');
     } 
     
-    // Always register through the helper function as well for redundancy
+    // Try the register helper function too (make sure we pass the KEY "create_physics_module")
     if (typeof window.registerModule === 'function') {
+        // Pass the correct KEY NAME that matches the function name pattern
         window.registerModule('create_physics_module', create_physics_module);
         console.log('Physics module registered via helper function');
-    } else {
-        // Last resort fallback - store on window for later attachment
-        window['create_physics_module'] = create_physics_module;
-        console.log('Physics module stored on window for later attachment');
     }
 })();
