@@ -1,4 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
+    initializeGameConsole();
+    
     // Initialize the game engine with error handling
     let game;
     try {
@@ -2012,6 +2014,53 @@ ${name}.load();`
                     }
                 });
             });
+        }
+    }
+
+    function initializeGameConsole() {
+        if (window.GameConsole) {
+            const console = window.GameConsole.init();
+            
+            // Access console controls using:
+            // GameConsole.log(), GameConsole.error(), GameConsole.warn(), etc.
+            
+            // Add error handling to the game start/stop functions
+            const originalStartGame = window.startGame;
+            window.startGame = function() {
+                try {
+                    GameConsole.info("Game starting...");
+                    if (originalStartGame) {
+                        originalStartGame.apply(this, arguments);
+                    }
+                    GameConsole.info("Game started successfully");
+                } catch (error) {
+                    GameConsole.error("Error starting game", error.stack);
+                    throw error; // Re-throw to maintain original behavior
+                }
+            };
+            
+            const originalStopGame = window.stopGame;
+            window.stopGame = function() {
+                try {
+                    GameConsole.info("Game stopping...");
+                    if (originalStopGame) {
+                        originalStopGame.apply(this, arguments);
+                    }
+                    GameConsole.info("Game stopped successfully");
+                } catch (error) {
+                    GameConsole.error("Error stopping game", error.stack);
+                    throw error;
+                }
+            };
+            
+            // Add special handling for runtime errors in game code
+            window.handleGameError = function(error, source) {
+                GameConsole.error(`Runtime error in ${source || 'game code'}: ${error.message}`, error.stack);
+            };
+            
+            GameConsole.info("Game Console initialized and ready");
+        } else {
+            console.warn("Game Console not available. Make sure console.js is loaded correctly.");
         }
     }
 
