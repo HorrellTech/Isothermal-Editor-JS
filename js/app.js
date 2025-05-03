@@ -2172,13 +2172,13 @@ this.invincible = false;
 this.invincible_time = 0;
 
 // Add physics module
-const physics = this.module_add(create_physics_module());
+const physics = this.module_add(engine.create_physics_module());
 physics.friction = 0.1;
 physics.gravity = 0.6;
 physics.max_gravity_speed = 12;
 
 // Add platformer controller module
-const platformer = this.module_add(create_platformer_module());
+const platformer = this.module_add(engine.create_platformer_module());
 platformer.max_speed = 4;
 platformer.jump_force = 10;
 platformer.can_jump = true;
@@ -2311,7 +2311,7 @@ this.move_speed = 2;
 this.direction = 1; // 1 = right, -1 = left
 
 // Add physics module for gravity
-const physics = this.module_add(create_physics_module());
+const physics = this.module_add(engine.create_physics_module());
 physics.friction = 0.1;
 physics.gravity = 0.5;
 physics.max_gravity_speed = 10;
