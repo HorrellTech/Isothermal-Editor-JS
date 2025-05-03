@@ -249,4 +249,20 @@ function create_physics_module() {
 }
 
 // Add the function to the engine
-window.registerModule('create_physics_module', create_physics_module);
+(function() {
+    // Try to register directly if window.engine exists
+    if (window.engine) {
+        window.engine['create_physics_module'] = create_physics_module;
+        console.log('Physics module registered directly to engine');
+    } 
+    
+    // Always register through the helper function as well for redundancy
+    if (typeof window.registerModule === 'function') {
+        window.registerModule('create_physics_module', create_physics_module);
+        console.log('Physics module registered via helper function');
+    } else {
+        // Last resort fallback - store on window for later attachment
+        window['create_physics_module'] = create_physics_module;
+        console.log('Physics module stored on window for later attachment');
+    }
+})();
