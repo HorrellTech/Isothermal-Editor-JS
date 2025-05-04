@@ -310,3 +310,206 @@ code {
     height: 100%;
     overflow: hidden;
 }
+
+/* Main editor container */
+.editor-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 300px;
+    background: #1e1e1e;
+    border: 1px solid #333;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+/* CodeMirror styling */
+.editor-container .CodeMirror {
+    height: auto !important;
+    flex: 1;
+    min-height: 200px;
+    border: none;
+    border-radius: 4px 4px 0 0;
+}
+
+/* Resizer bar */
+.editor-container .resizer {
+    height: 4px;
+    background: #333;
+    cursor: ns-resize;
+    user-select: none;
+    transition: background 0.2s;
+}
+
+.editor-container .resizer:hover {
+    background: #444;
+}
+
+/* Hint container */
+.editor-container .code-hint-container {
+    height: 200px;
+    min-height: 100px;
+    max-height: 50vh;
+    background: #1e1e1e;
+    border-top: 1px solid #333;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.editor-container .code-hint-panel {
+    flex: 1;
+    overflow: auto;
+    padding: 8px;
+}
+
+/* Event editor specific styles */
+.event-code-editor {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+/* Script editor specific styles */
+.script-edit-area {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Object editor layout */
+.object-edit-area {
+    display: flex;
+    height: 100%;
+}
+
+.events-list {
+    width: 150px;
+    border-right: 1px solid #333;
+    padding: 8px;
+    overflow-y: auto;
+}
+
+.event-editor {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.event-editor-header {
+    padding: 8px;
+    border-bottom: 1px solid #333;
+}
+
+.editor-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 300px;
+    background: #1e1e1e;
+    border: 1px solid #333;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+/* CodeMirror styling */
+.editor-container .CodeMirror {
+    height: auto !important;
+    flex: 1;
+    min-height: 200px;
+    border: none !important;
+    border-radius: 4px 4px 0 0;
+    margin: 0 !important;
+}
+
+/* Resizer styling */
+.editor-container .resizer {
+    height: 4px;
+    background: #333;
+    cursor: ns-resize;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    flex-shrink: 0;
+    z-index: 10;
+    transition: background-color 0.2s;
+}
+
+.editor-container .resizer:hover {
+    background: #444;
+}
+
+/* Hint container styling */
+.editor-container .code-hint-container {
+    height: 200px;
+    min-height: 100px;
+    max-height: 40vh;
+    background: #1e1e1e;
+    border-top: 1px solid #333;
+    color: #ddd;
+    font-family: Monaco, Menlo, "Ubuntu Mono", Consolas, source-code-pro, monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    display: flex;
+    flex-direction: column;
+}
+
+.editor-container .code-hint-panel {
+    flex: 1;
+    overflow: auto;
+    padding: 8px;
+}
+
+/* Specific fixes for object editor */
+#eventCodeEditor .editor-container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Specific fixes for script editor */
+#scriptEditArea .editor-container {
+    height: 100%;
+}
+
+.editor-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 300px;
+    background: #1e1e1e;
+    border: 1px solid #333;
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative; /* Add this */
+    z-index: 1; /* Add this */
+}
+
+/* Update hint container to ensure proper stacking */
+.editor-container .code-hint-container {
+    height: 200px;
+    min-height: 100px;
+    max-height: 40vh;
+    background: #1e1e1e;
+    border-top: 1px solid #333;
+    position: relative; /* Add this */
+    z-index: 1; /* Add this */
+    display: flex;
+    flex-direction: column;
+}
+
+/* Ensure resizer stays above other elements */
+.editor-container .resizer {
+    height: 4px;
+    background: #333;
+    cursor: ns-resize;
+    position: relative; /* Add this */
+    z-index: 2; /* Add this */
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    flex-shrink: 0;
+}
+

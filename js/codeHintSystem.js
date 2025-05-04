@@ -17,6 +17,9 @@ const CodeHintSystem = (function() {
     function init(editor) {
         console.log("CodeHintSystem.init called for editor");
         
+        // Clean up any existing panels for this editor first
+        cleanupExistingPanels(editor);
+        
         // Prevent multiple initializations on the same editor
         if (editor._hintSystemInitialized) {
             console.log("Editor already has hint system initialized");
@@ -29,7 +32,7 @@ const CodeHintSystem = (function() {
         const editorId = 'editor_' + Math.random().toString(36).substring(2, 10);
         editor._hintId = editorId;
         editor._hintSystemInitialized = true;
-        
+    
         // Create the hint panel for this editor
         createHintPanel(editor);
         
@@ -70,6 +73,25 @@ const CodeHintSystem = (function() {
                 return hintPanel;
             }
         };
+    }
+
+    function cleanupExistingPanels(editor) {
+        const wrapper = editor.getWrapperElement();
+        if (!wrapper) return;
+    
+        const container = wrapper.closest('.editor-container');
+        if (!container) return;
+    
+        // Remove any existing hint containers
+        const existingContainers = container.querySelectorAll('.code-hint-container');
+        existingContainers.forEach(container => container.remove());
+    
+        // Remove any existing resizers
+        const existingResizers = container.querySelectorAll('.resizer');
+        existingResizers.forEach(resizer => resizer.remove());
+    
+        // Reset the editor's initialization flag
+        editor._hintSystemInitialized = false;
     }
     
     /**
@@ -113,35 +135,85 @@ const CodeHintSystem = (function() {
      * @param {Object} editor - CodeMirror editor instance
      */
     function createHintPanel(editor) {
-        const editorWrapper = editor.getWrapperElement();
-        
-        // Create or find wrapper
-        let wrapper = editorWrapper.closest('.editor-hint-wrapper');
-        if (!wrapper) {
-            wrapper = document.createElement('div');
-            wrapper.className = 'editor-hint-wrapper';
-            editorWrapper.parentNode.insertBefore(wrapper, editorWrapper);
-            wrapper.appendChild(editorWrapper);
+        // Find or create the editor container
+        let container = editor.getWrapperElement().closest('.editor-container');
+        if (!container) {
+            // Create new container structure
+            container = document.createElement('div');
+            container.className = 'editor-container';
+            
+            // Move the editor into the container
+            const editorWrapper = editor.getWrapperElement();
+            editorWrapper.parentNode.insertBefore(container, editorWrapper);
+            container.appendChild(editorWrapper);
         }
-        
-        // Create resizer
-        const resizer = document.createElement('div');
-        resizer.className = 'resizer';
-        
-        // Create hint container
-        const container = document.createElement('div');
-        container.className = 'code-hint-container';
-        
-        // Create hint panel
-        const panel = document.createElement('div');
-        panel.className = 'code-hint-panel';
-        container.appendChild(panel);
-        
-        // Add elements in correct order
-        wrapper.appendChild(resizer);
-        wrapper.appendChild(container);
-        
+    
+        // Create or find resizer
+        let resizer = container.querySelector('.resizer');
+        if (!resizer) {
+            resizer = document.createElement('div');
+            resizer.className = 'resizer';
+            container.appendChild(resizer);
+        }
+    
+        // Create or find hint container
+        let hintContainer = container.querySelector('.code-hint-container');
+        if (!hintContainer) {
+            hintContainer = document.createElement('div');
+            hintContainer.className = 'code-hint-container';
+            container.appendChild(hintContainer);
+        }
+    
+        // Create or find hint panel
+        let panel = hintContainer.querySelector('.code-hint-panel');
+        if (!panel) {
+            panel = document.createElement('div');
+            panel.className = 'code-hint-panel';
+            hintContainer.appendChild(panel);
+        }
+    
+        // Store reference to the hint panel
+        hintPanel = panel;
+    
+        // Initialize resizer functionality
+        initializeResizer(editor);
+    
         return panel;
+    }
+
+    function initializeResizer(editor) {
+        const container = editor.getWrapperElement().closest('.editor-container');
+        if (!container) return;
+    
+        const resizer = container.querySelector('.resizer');
+        const hintContainer = container.querySelector('.code-hint-container');
+        if (!resizer || !hintContainer) return;
+    
+        let startY;
+        let startHeight;
+    
+        function startResize(e) {
+            e.preventDefault();
+            startY = e.clientY;
+            startHeight = parseInt(getComputedStyle(hintContainer).height, 10);
+            document.documentElement.addEventListener('mousemove', resize);
+            document.documentElement.addEventListener('mouseup', stopResize);
+        }
+    
+        function resize(e) {
+            e.preventDefault();
+            const delta = startY - e.clientY;
+            const newHeight = Math.max(100, Math.min(window.innerHeight / 2, startHeight + delta));
+            hintContainer.style.height = `${newHeight}px`;
+            editor.refresh();
+        }
+    
+        function stopResize() {
+            document.documentElement.removeEventListener('mousemove', resize);
+            document.documentElement.removeEventListener('mouseup', stopResize);
+        }
+    
+        resizer.addEventListener('mousedown', startResize);
     }
 
     function ensureEditorWrapper(editor) {
@@ -225,27 +297,11 @@ const CodeHintSystem = (function() {
      */
     function getHintContainer() {
         if (!activeEditor) return null;
-        const editorWrapper = activeEditor.getWrapperElement();
-        if (!editorWrapper) return null;
         
-        // Check for a few possible locations of the hint container
-        let container = editorWrapper.nextElementSibling;
-        if (container && container.classList.contains('resizer')) {
-            container = container.nextElementSibling;
-        }
-        if (container && container.classList.contains('code-hint-container')) {
-            return container;
-        }
+        const container = activeEditor.getWrapperElement().closest('.editor-container');
+        if (!container) return null;
         
-        const wrapper = editorWrapper.closest('.editor-hint-wrapper');
-        if (wrapper) {
-            const containers = wrapper.querySelectorAll('.code-hint-container');
-            if (containers.length > 0) {
-                return containers[0];
-            }
-        }
-        
-        return null;
+        return container.querySelector('.code-hint-container');
     }
     
     /**
@@ -652,40 +708,35 @@ const CodeHintSystem = (function() {
     function fixLayoutGaps() {
         if (!activeEditor) return;
         
-        const editorWrapper = activeEditor.getWrapperElement();
-        if (!editorWrapper) return;
+        const container = activeEditor.getWrapperElement().closest('.editor-container');
+        if (!container) return;
         
-        // Find the closest editor hint wrapper
-        const hintWrapper = editorWrapper.closest('.editor-hint-wrapper');
-        if (!hintWrapper) return;
-        
-        // Get the container and resizer
-        const hintContainer = hintWrapper.querySelector('.code-hint-container');
-        const resizer = hintWrapper.querySelector('.resizer');
+        const hintContainer = container.querySelector('.code-hint-container');
+        const resizer = container.querySelector('.resizer');
         
         if (hintContainer) {
-            // Force display and positioning
+            // Ensure proper display
             hintContainer.style.display = 'block';
-            hintContainer.style.marginTop = '0';
             hintContainer.style.position = 'relative';
             hintContainer.style.width = '100%';
+            hintContainer.style.marginTop = '0';
             
-            // Force the editor to refresh for proper layout calculation
+            // Force editor refresh
             setTimeout(() => activeEditor.refresh(), 0);
             
-            // Check if there is a resizer between editor and hint container
+            // Ensure resizer is properly positioned
             if (resizer) {
-                // Make sure resizer has no margins
                 resizer.style.margin = '0';
                 resizer.style.height = '4px';
-            } else {
-                // If no resizer, check for any elements between them and fix
-                const containerIndex = Array.from(hintWrapper.children).indexOf(hintContainer);
-                const editorIndex = Array.from(hintWrapper.children).indexOf(editorWrapper);
                 
-                if (containerIndex > editorIndex + 1) {
-                    // There are elements between editor and hints, rearrange them
-                    hintWrapper.insertBefore(hintContainer, editorWrapper.nextSibling);
+                // Make sure resizer is between editor and hint container
+                const editorWrapper = activeEditor.getWrapperElement();
+                const resizerIndex = Array.from(container.children).indexOf(resizer);
+                const editorIndex = Array.from(container.children).indexOf(editorWrapper);
+                const hintIndex = Array.from(container.children).indexOf(hintContainer);
+                
+                if (!(resizerIndex > editorIndex && resizerIndex < hintIndex)) {
+                    container.insertBefore(resizer, hintContainer);
                 }
             }
         }

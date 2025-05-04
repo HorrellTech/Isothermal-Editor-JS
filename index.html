@@ -119,9 +119,12 @@
                                         <h4 id="currentEventName">No Event Selected</h4>
                                     </div>
                                     <div id="eventCodeEditor" class="event-code-editor">
-                                        <div class="editor-hint-wrapper">
+                                        <div class="editor-container">
                                             <textarea id="code-editor"></textarea>
-                                            <!-- The hint panel will be inserted after the CodeMirror instance -->
+                                            <div class="resizer"></div>
+                                            <div class="code-hint-container">
+                                                <div class="code-hint-panel"></div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -287,8 +290,12 @@
                                 <p>Select a script from the list or create a new one.</p>
                             </div>
                             <div id="scriptEditArea" class="script-edit-area" style="display: none;">
-                                <div id="scriptCodeEditor" class="script-code-editor">
+                                <div class="editor-container">
                                     <textarea id="script-code-editor"></textarea>
+                                    <div class="resizer"></div>
+                                    <div class="code-hint-container">
+                                        <div class="code-hint-panel"></div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
