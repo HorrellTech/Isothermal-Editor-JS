@@ -79,6 +79,23 @@ const LevelEditor = (function() {
             // Add tab functionality within the level editor panel
             this.setupLevelEditorTabs();
         
+            // Always show the object palette and settings tabs, even when no level is selected
+            const objectsTabPane = document.getElementById('objects-tab');
+            if (objectsTabPane) {
+                objectsTabPane.classList.add('active');
+                objectsTabPane.style.display = 'block';
+            }
+            
+            // Always update the object palette
+            this.updateObjectPalette();
+            
+            // Also initialize the settings tab
+            const settingsTabPane = document.getElementById('settings-tab');
+            if (settingsTabPane) {
+                // Make sure settings tab is visible even without a level
+                settingsTabPane.style.display = 'none'; // Initially hidden, but accessible via tab
+            }
+        
             // Monitor for tab activation to refresh objects
             const allTabButtons = document.querySelectorAll('.tab-btn');
             allTabButtons.forEach(tabBtn => {
@@ -90,6 +107,12 @@ const LevelEditor = (function() {
                         if (window.gameObjects) {
                             gameObjects = window.gameObjects;
                             this.updateObjectPalette();
+                            
+                            // Make sure the objects tab is visible
+                            const objectsTabBtn = document.querySelector('.level-tab-btn[data-level-tab="objects"]');
+                            if (objectsTabBtn && !objectsTabBtn.classList.contains('active')) {
+                                objectsTabBtn.click();
+                            }
                         }
                     }
                 });
@@ -97,7 +120,7 @@ const LevelEditor = (function() {
             
             // Make game objects reference available to the window - critical for level system
             window.gameObjects = gameObjectsRef;
-
+        
             // Make sure game objects are explicitly updated on window
             setInterval(() => {
                 if (window.LevelEditor && gameObjects) {
@@ -131,11 +154,39 @@ const LevelEditor = (function() {
             
             if (tabButtons.length === 0 || tabPanes.length === 0) return;
             
+            // Set the objects tab as active by default if no tab is active
+            let hasActiveTab = false;
+            tabButtons.forEach(btn => {
+                if (btn.classList.contains('active')) {
+                    hasActiveTab = true;
+                }
+            });
+            
+            if (!hasActiveTab) {
+                // Find and activate the objects tab
+                const objectsTabBtn = document.querySelector('.level-tab-btn[data-level-tab="objects"]');
+                if (objectsTabBtn) {
+                    objectsTabBtn.classList.add('active');
+                    
+                    // Also activate its corresponding pane
+                    const objectsTabPane = document.getElementById('objects-tab');
+                    if (objectsTabPane) {
+                        tabPanes.forEach(pane => pane.classList.remove('active'));
+                        objectsTabPane.classList.add('active');
+                        objectsTabPane.style.display = 'block';
+                    }
+                }
+            }
+            
+            // Set up click events for tab buttons
             tabButtons.forEach(button => {
                 button.addEventListener('click', () => {
                     // Remove active class from all buttons and panes
                     tabButtons.forEach(btn => btn.classList.remove('active'));
-                    tabPanes.forEach(pane => pane.classList.remove('active'));
+                    tabPanes.forEach(pane => {
+                        pane.classList.remove('active');
+                        pane.style.display = 'none';
+                    });
                     
                     // Add active class to clicked button
                     button.classList.add('active');
@@ -146,6 +197,12 @@ const LevelEditor = (function() {
                     
                     if (targetPane) {
                         targetPane.classList.add('active');
+                        targetPane.style.display = 'block';
+                        
+                        // If switching to settings tab, update the resources in the background selection
+                        if (tabId === 'settings' && window.resources) {
+                            this.syncResources();
+                        }
                     }
                 });
             });
@@ -750,11 +807,25 @@ const LevelEditor = (function() {
             console.log("Filtered game objects:", gameObjects.length);
             console.log("Object names available:", gameObjects.map(obj => obj.name));
             
-            // Rest of your existing code...
+            // Clear existing content
             elements.objectPalette.innerHTML = '';
             
+            // Set styles to fill container
+            elements.objectPalette.style.display = 'flex';
+            elements.objectPalette.style.flexDirection = 'column';
+            elements.objectPalette.style.margin = '10px';
+            elements.objectPalette.style.padding = '5px';
+            elements.objectPalette.style.maxHeight = 'calc(100% - 20px)';
+            elements.objectPalette.style.overflowY = 'auto';
+            
             if (gameObjects.length === 0) {
-                elements.objectPalette.innerHTML = '<div class="empty-palette">No valid objects available. Please create objects with names.</div>';
+                const emptyMessage = document.createElement('div');
+                emptyMessage.className = 'empty-palette';
+                emptyMessage.style.padding = '10px';
+                emptyMessage.style.color = '#888';
+                emptyMessage.style.textAlign = 'center'; 
+                emptyMessage.textContent = 'No valid objects available. Please create objects with names.';
+                elements.objectPalette.appendChild(emptyMessage);
                 return;
             }
             
@@ -763,12 +834,35 @@ const LevelEditor = (function() {
                 const paletteItem = document.createElement('div');
                 paletteItem.className = 'palette-item';
                 
+                // Style the palette item to fill width
+                paletteItem.style.padding = '8px 10px';
+                paletteItem.style.marginBottom = '5px';
+                paletteItem.style.backgroundColor = '#444';
+                paletteItem.style.borderRadius = '4px';
+                paletteItem.style.cursor = 'pointer';
+                paletteItem.style.transition = 'background-color 0.2s';
+                
                 if (selectedPaletteObject === obj.id) {
                     paletteItem.classList.add('selected');
+                    paletteItem.style.backgroundColor = '#666';
+                    paletteItem.style.boxShadow = '0 0 0 2px #888 inset';
                 }
                 
                 paletteItem.textContent = obj.name;
                 paletteItem.setAttribute('data-id', obj.id);
+                
+                // Add hover effect
+                paletteItem.addEventListener('mouseover', () => {
+                    if (selectedPaletteObject !== obj.id) {
+                        paletteItem.style.backgroundColor = '#555';
+                    }
+                });
+                
+                paletteItem.addEventListener('mouseout', () => {
+                    if (selectedPaletteObject !== obj.id) {
+                        paletteItem.style.backgroundColor = '#444';
+                    }
+                });
                 
                 paletteItem.addEventListener('click', () => {
                     // Select this object for placement
@@ -777,8 +871,12 @@ const LevelEditor = (function() {
                     // Update UI
                     document.querySelectorAll('.palette-item').forEach(item => {
                         item.classList.remove('selected');
+                        item.style.backgroundColor = '#444';
+                        item.style.boxShadow = 'none';
                     });
                     paletteItem.classList.add('selected');
+                    paletteItem.style.backgroundColor = '#666';
+                    paletteItem.style.boxShadow = '0 0 0 2px #888 inset';
                     
                     // Switch to place tool
                     if (elements.placeObjectBtn && elements.eraseBtn) {
@@ -790,6 +888,12 @@ const LevelEditor = (function() {
                 
                 elements.objectPalette.appendChild(paletteItem);
             });
+        },
+
+        setGameObjectsReference: function(newGameObjects) {
+            console.log("Updating level editor game objects reference");
+            gameObjects = newGameObjects;
+            this.updateObjectPalette();
         },
         
         // Draw the level grid and objects
@@ -1211,18 +1315,39 @@ const LevelEditor = (function() {
                 if (elements.noLevelSelected) elements.noLevelSelected.style.display = 'flex';
                 if (elements.levelEditArea) elements.levelEditArea.style.display = 'none';
                 
-                // Hide level detail header and tabs
-                document.getElementById('levelDetailHeader').style.display = 'none';
-                document.getElementById('levelEditorTabs').style.display = 'none';
+                // Hide level detail header 
+                const levelDetailHeader = document.getElementById('levelDetailHeader');
+                if (levelDetailHeader) levelDetailHeader.style.display = 'none';
                 
-                // Hide all tab panes
+                // Always show level editor tabs, even when no level is selected
+                const levelEditorTabs = document.getElementById('levelEditorTabs');
+                if (levelEditorTabs) levelEditorTabs.style.display = 'flex';
+                
+                // Get active tab or default to objects tab
+                const activeTabBtn = document.querySelector('.level-tab-btn.active');
+                const activeTabId = activeTabBtn ? activeTabBtn.getAttribute('data-level-tab') : 'objects';
+                
+                // Show the active tab pane or objects tab by default
                 document.querySelectorAll('.level-tab-pane').forEach(pane => {
-                    pane.style.display = 'none';
+                    const paneId = pane.id.replace('-tab', '');
+                    
+                    // Make the active tab visible, hide others
+                    if (paneId === activeTabId) {
+                        pane.classList.add('active');
+                        pane.style.display = 'block';
+                    } else {
+                        pane.classList.remove('active');
+                        pane.style.display = 'none';
+                    }
                 });
+                
+                // Update object palette even when no level is selected
+                this.updateObjectPalette();
                 
                 return;
             }
             
+            // Rest of the existing function for when a level is selected...
             const level = levels.find(l => l.id === selectedLevel);
             if (!level) return;
             
@@ -1233,8 +1358,11 @@ const LevelEditor = (function() {
             if (elements.levelEditArea) elements.levelEditArea.style.display = 'flex';
             
             // Show level detail header and tabs
-            document.getElementById('levelDetailHeader').style.display = 'flex';
-            document.getElementById('levelEditorTabs').style.display = 'flex';
+            const levelDetailHeader = document.getElementById('levelDetailHeader');
+            if (levelDetailHeader) levelDetailHeader.style.display = 'flex';
+            
+            const levelEditorTabs = document.getElementById('levelEditorTabs');
+            if (levelEditorTabs) levelEditorTabs.style.display = 'flex';
             
             // Show the active tab pane
             const activeTabButton = document.querySelector('.level-tab-btn.active');

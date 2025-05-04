@@ -136,77 +136,141 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     });
 
-    // Initialize code hint system with improved timing and error handling
-    if (window.CodeHintSystem) {
-        const initCodeHints = function(maxAttempts = 10) {
-            let attempts = 0;
-            
-            const tryInit = function() {
-                attempts++;
-                console.log(`Initializing code hints (attempt ${attempts})`);
-                
-                if (!editor) {
-                    if (attempts < maxAttempts) {
-                        console.warn("CodeMirror editor not ready yet, retrying...");
-                        setTimeout(tryInit, 200);
-                    } else {
-                        console.error("Failed to initialize code hints: Editor not available");
-                    }
-                    return;
-                }
-                
-                try {
-                    // Initialize the code hint system and store the returned API
-                    const hintSystem = window.CodeHintSystem.init(editor);
-                    
-                    // Store the API consistently at the window level
-                    window.codeHintSystem = hintSystem;
-                    
-                    if (window.codeHintSystem) {
-                        console.log("Code hint system initialized successfully");
-                        
-                        // Apply proper sizing to code mirror and hint box
-                        limitCodeMirrorHeight();
-                        
-                        // Force initial refresh of hints
-                        if (typeof window.codeHintSystem.refresh === 'function') {
-                            window.codeHintSystem.refresh();
-                        }
-                        
-                        // Ensure the hint panel is properly sized
-                        const hintPanel = document.querySelector('.CodeMirror-hints');
-                        if (hintPanel) {
-                            hintPanel.style.maxHeight = '200px';
-                            hintPanel.style.overflowY = 'auto';
-                        }
-                    } else {
-                        console.error("Failed to initialize code hints: init returned null");
-                    }
-                } catch (err) {
-                    console.error("Error initializing code hints:", err);
-                }
-            };
-            
-            // Start initialization
-            setTimeout(tryInit, 200);
-        };
+    /**
+     * Fix layout issues with gaps between CodeMirror and hint panel
+     */
+    function fixLayoutGaps() {
+        if (!activeEditor) return;
         
-        // Call the initialization function
-        initCodeHints();
-    } else {
-        console.error("CodeHintSystem not found! Make sure codeHintSystem.js is loaded correctly.");
+        const editorWrapper = activeEditor.getWrapperElement();
+        if (!editorWrapper) return;
+        
+        // Find the closest editor hint wrapper
+        const hintWrapper = editorWrapper.closest('.editor-hint-wrapper');
+        if (!hintWrapper) return;
+        
+        // Get the container and resizer
+        const hintContainer = hintWrapper.querySelector('.code-hint-container');
+        const resizer = hintWrapper.querySelector('.resizer');
+        
+        if (hintContainer) {
+            // Ensure the container is directly below the editor with no gap
+            hintContainer.style.marginTop = '0';
+            
+            // Force the editor to refresh
+            setTimeout(() => activeEditor.refresh(), 0);
+            
+            // Check if there is a resizer between editor and hint container
+            if (resizer) {
+                // Make sure resizer has no margins
+                resizer.style.margin = '0';
+                resizer.style.height = '4px';
+            } else {
+                // If no resizer, check for any elements between them and fix
+                const containerIndex = Array.from(hintWrapper.children).indexOf(hintContainer);
+                const editorIndex = Array.from(hintWrapper.children).indexOf(editorWrapper);
+                
+                if (containerIndex > editorIndex + 1) {
+                    // There are elements between editor and hints, rearrange them
+                    hintWrapper.insertBefore(hintContainer, editorWrapper.nextSibling);
+                }
+            }
+        }
     }
 
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            if (btn.getAttribute('data-tab') === 'objects' || btn.getAttribute('data-tab') === 'scripts') {
-                // Refresh code hints when switching to an editor tab
-                if (window.codeHintSystem && typeof window.codeHintSystem.refresh === 'function') {
-                    window.codeHintSystem.refresh();
+    // Add a small delay to ensure CodeMirror is fully initialized
+    setTimeout(() => {
+        // Initialize code hints for the main editor
+        if (window.CodeHintSystem) {
+            try {
+                const mainEditor = document.querySelector('.CodeMirror').CodeMirror;
+                if (mainEditor) {
+                    const hintSystem = window.CodeHintSystem.init(mainEditor);
+                    if (hintSystem) {
+                        console.log("CodeHintSystem initialized successfully for main editor");
+                        window.codeHintSystem = hintSystem;
+                    }
+                }
+            } catch (e) {
+                console.error("Error initializing CodeHintSystem:", e);
+            }
+        } else {
+            console.error("CodeHintSystem not available");
+        }
+        
+        // Initialize for script editor if available
+        if (window.ScriptEditor && window.ScriptEditor.getEditor) {
+            try {
+                const scriptEditor = window.ScriptEditor.getEditor();
+                if (scriptEditor) {
+                    setTimeout(() => {
+                        const scriptHintSystem = window.CodeHintSystem.init(scriptEditor);
+                        if (scriptHintSystem) {
+                            console.log("CodeHintSystem initialized successfully for script editor");
+                        }
+                    }, 500);
+                }
+            } catch (e) {
+                console.error("Error initializing CodeHintSystem for script editor:", e);
+            }
+        }
+    }, 1000);
+
+    document.querySelectorAll('.tab-btn').forEach(button => {
+        button.addEventListener('click', () => {
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            tabPanes.forEach(pane => pane.classList.remove('active'));
+            
+            button.classList.add('active');
+            
+            const tabId = button.getAttribute('data-tab');
+            const targetPane = document.getElementById(tabId);
+            
+            if (targetPane) {
+                targetPane.classList.add('active');
+                
+                // Sync script functions when switching to objects tab
+                if (tabId === 'objects') {
+                    // Force proper layout of code hint containers in objects tab
+                    setTimeout(() => {
+                        const objectEditArea = document.getElementById('objectEditArea');
+                        if (objectEditArea && objectEditArea.style.display !== 'none') {
+                            const hintContainers = objectEditArea.querySelectorAll('.code-hint-container');
+                            hintContainers.forEach(container => {
+                                container.style.display = 'block';
+                                container.style.position = 'relative';
+                                container.style.width = '100%';
+                            });
+                            
+                            // Force refresh of CodeMirror
+                            if (window.editor) {
+                                window.editor.refresh();
+                            }
+                            
+                            // Re-apply hint system
+                            if (window.codeHintSystem && window.codeHintSystem.fixLayout) {
+                                window.codeHintSystem.fixLayout();
+                            }
+                        }
+                    }, 200);
                 }
                 
-                // Also ensure proper sizing
-                setTimeout(limitCodeMirrorHeight, 10);
+                // Update Script Editor when switching to scripts tab
+                if (tabId === 'scripts' && window.ScriptEditor) {
+                    setTimeout(() => {
+                        window.ScriptEditor.refresh();
+                        
+                        // Force refresh of script editor hints
+                        if (window.ScriptEditor.getEditor) {
+                            const scriptEditor = window.ScriptEditor.getEditor();
+                            if (scriptEditor && window.CodeHintSystem) {
+                                window.CodeHintSystem.updateHints();
+                            }
+                        }
+                    }, 100);
+                }
+            } else {
+                console.error(`Tab pane with id "${tabId}" not found`);
             }
         });
     });
@@ -819,9 +883,81 @@ document.addEventListener('DOMContentLoaded', () => {
         // Update event name display
         currentEventName.textContent = `${obj.name}.${eventName}()`;
         
-        // Refresh editor
-        setTimeout(() => editor.refresh(), 1);
+        // Ensure the editor is in an editor-hint-wrapper
+        const editorWrapper = editor.getWrapperElement();
+        const containerElem = editorWrapper.closest('.editor-hint-wrapper');
+        
+        if (!containerElem) {
+            console.log("Event editor needs hint wrapper, creating one...");
+            
+            // Find the containing element
+            const container = editorWrapper.parentElement;
+            
+            // Create a new wrapper
+            const hintWrapper = document.createElement('div');
+            hintWrapper.className = 'editor-hint-wrapper';
+            
+            // Move the editor into the wrapper
+            container.insertBefore(hintWrapper, editorWrapper);
+            hintWrapper.appendChild(editorWrapper);
+        }
+        
+        // Refresh editor and initialize hint system
+        setTimeout(() => {
+            editor.refresh();
+            
+            // Initialize the code hint system for this editor
+            if (window.CodeHintSystem && !editor._hintSystemInitialized) {
+                window.codeHintSystem = window.CodeHintSystem.init(editor);
+            }
+            
+            // Force refresh of code hints
+            if (window.codeHintSystem && typeof window.codeHintSystem.refresh === 'function') {
+                window.codeHintSystem.refresh();
+            }
+            
+            // Make sure the hint panel is visible
+            const hintContainer = editorWrapper.closest('.editor-hint-wrapper')?.querySelector('.code-hint-container');
+            if (hintContainer) {
+                hintContainer.style.display = 'block';
+            }
+        }, 50);
+        
+        // Call the onEventSelected function if it exists
+        if (typeof window.onEventSelected === 'function') {
+            window.onEventSelected(eventName, selectedObject);
+        }
     }
+
+    function forceShowCodeHints() {
+        if (!window.codeHintSystem || !editor) return;
+        
+        // Force create hint panel if needed
+        const wrapper = editor.getWrapperElement();
+        let container = wrapper.nextElementSibling;
+        
+        if (!container || !container.classList.contains('code-hint-container')) {
+          console.log("Creating missing hint panel container");
+          if (window.CodeHintSystem && window.CodeHintSystem.init) {
+            window.codeHintSystem = window.CodeHintSystem.init(editor);
+          }
+        } else {
+          // Make sure the container is visible
+          container.style.display = 'block';
+        }
+        
+        // Force a refresh of hints
+        if (window.codeHintSystem && typeof window.codeHintSystem.refresh === 'function') {
+          window.codeHintSystem.refresh();
+        }
+        
+        // Explicitly show the hint panel
+        if (window.codeHintSystem && typeof window.codeHintSystem.show === 'function') {
+          window.codeHintSystem.show();
+        }
+        
+        console.log("Forced code hints display and refresh");
+      }
     
     // Generate unique ID
     function generateId() {
@@ -1219,9 +1355,10 @@ document.addEventListener('DOMContentLoaded', () => {
     `);
             }
     
-            // 3. Reset level editor
             if (window.LevelEditor) {
-                window.LevelEditor.setLevels([]);
+                // First update its internal reference to gameObjects
+                window.LevelEditor.setGameObjectsReference([]); // Reset with empty array
+                window.LevelEditor.setLevels([]); // Reset levels
             }
     
             // 4. Reset resources
@@ -1314,6 +1451,21 @@ document.addEventListener('DOMContentLoaded', () => {
     
             // 11. Show confirmation to the user
             console.log("Project reset to initial state");
+
+            // Click the level tab to force refresh the level editor
+            setTimeout(() => {
+                const levelsTabBtn = document.querySelector('[data-tab="levels"]');
+                if (levelsTabBtn) {
+                    levelsTabBtn.click();
+                    
+                    // And switch back to objects tab
+                    setTimeout(() => {
+                        if (objectsTabBtn) {
+                            objectsTabBtn.click();
+                        }
+                    }, 100);
+                }
+            }, 100);
         }
     });
 
@@ -1421,7 +1573,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Load Project
     loadProject.addEventListener('click', () => {
         // Update the accept attribute to handle ZIP files
-        loadFileInput.accept = 'iproj,.zip';
+        loadFileInput.accept = '.iproj,.zip';
         loadFileInput.click();
     });
 
@@ -1447,6 +1599,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Load objects and folders
                 if (projectData.gameObjects) {
                     gameObjects = projectData.gameObjects;
+                    // Update window.gameObjects immediately
+                    window.gameObjects = gameObjects;
                 }
                 if (projectData.folders) {
                     folders = projectData.folders;
@@ -1527,6 +1681,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }
                 }
+
+                // Update level editor with new game objects before loading levels
+                if (window.LevelEditor) {
+                    window.LevelEditor.setGameObjectsReference(gameObjects);
+                }
                 
                 // Load levels if level editor is initialized
                 if (projectData.levels && window.LevelEditor) {
@@ -1557,6 +1716,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (activeType) {
                     renderResourcesList(activeType.getAttribute('data-type'));
                 }
+
+                // Force level editor to refresh
+                if (window.LevelEditor) {
+                    window.LevelEditor.refreshGameObjects();
+                }
+
+                // Click the level tab to force refresh the level editor
+                setTimeout(() => {
+                    const levelsTabBtn = document.querySelector('[data-tab="levels"]');
+                    if (levelsTabBtn) {
+                        levelsTabBtn.click();
+                        
+                        // Then switch back to objects tab
+                        setTimeout(() => {
+                            const objectsTabBtn = document.querySelector('[data-tab="objects"]');
+                            if (objectsTabBtn) {
+                                objectsTabBtn.click();
+                            }
+                        }, 100);
+                    }
+                }, 100);
                 
                 // Provide feedback about the loaded project
                 console.log("Project loaded successfully");
@@ -2023,7 +2203,7 @@ ${name}.load();`
                         <div class="resource-type" data-type="backgrounds">Backgrounds</div>
                         <div class="resource-type" data-type="sounds">Sounds</div>
                         <div class="resource-type" data-type="fonts">Fonts</div>
-                        <div class="resource-type" data-type="data">Data</div>
+                        <div class="resource-type" data-type="data">Other Data</div>
                     </div>
                 </div>
                 <div class="resources-content">
@@ -2065,6 +2245,111 @@ ${name}.load();`
 
         // Initial render of resources list
         renderResourcesList('sprites');
+    }
+
+    function syncScriptFunctionsToHints() {
+        // First, check if we can access the script data
+        if (!window.ScriptEditor || !window.ScriptEditor.getScriptsData) {
+            console.warn("Cannot sync script functions - Script Editor not available");
+            return;
+        }
+        
+        // Get current scripts data
+        const scriptsData = window.ScriptEditor.getScriptsData().scripts;
+        if (!Array.isArray(scriptsData)) return;
+        
+        // Parse scripts to extract function definitions
+        const scriptFunctions = [];
+        
+        scriptsData.forEach(script => {
+            if (!script.code) return;
+            
+            // Use regex to find function declarations
+            const functionPattern = /function\s+([a-zA-Z0-9_]+)\s*\(([^)]*)\)/g;
+            let match;
+            
+            while ((match = functionPattern.exec(script.code)) !== null) {
+                const funcName = match[1];
+                const params = match[2].split(',').map(param => param.trim());
+                
+                // Try to extract description from comments above
+                let description = `Function from ${script.name} script`;
+                let paramDescriptions = [];
+                let returnType = 'any';
+                
+                // Look for JSDoc style comment before the function
+                const codeBeforeFunc = script.code.substring(0, match.index);
+                const commentMatch = codeBeforeFunc.match(/\/\*\*([\s\S]*?)\*\/\s*$/);
+                
+                if (commentMatch) {
+                    const comment = commentMatch[1];
+                    
+                    // Extract function description
+                    const descMatch = comment.match(/@description\s+(.*?)(?=\n\s*\*\s*@|\n\s*\*\/|$)/s);
+                    if (descMatch) {
+                        description = descMatch[1].trim();
+                    } else {
+                        // If no @description tag, use the first line of the comment
+                        const firstLine = comment.split('\n')[0];
+                        if (firstLine && !firstLine.includes('@')) {
+                            description = firstLine.replace(/\*\s*/, '').trim();
+                        }
+                    }
+                    
+                    // Extract parameter descriptions
+                    const paramMatches = [...comment.matchAll(/@param\s+\{([^}]*)\}\s+([a-zA-Z0-9_]+)\s*-?\s*(.*?)(?=\n\s*\*\s*@|\n\s*\*\/|$)/gs)];
+                    if (paramMatches.length > 0) {
+                        paramDescriptions = paramMatches.map(m => ({
+                            type: m[1].trim(),
+                            name: m[2].trim(),
+                            description: m[3].trim()
+                        }));
+                    }
+                    
+                    // Extract return type
+                    const returnMatch = comment.match(/@returns\s+\{([^}]*)\}\s*(.*?)(?=\n\s*\*\s*@|\n\s*\*\/|$)/s);
+                    if (returnMatch) {
+                        returnType = returnMatch[1].trim();
+                    }
+                }
+                
+                // Add to script functions array
+                scriptFunctions.push({
+                    name: funcName,
+                    type: 'function',
+                    description: description,
+                    parameters: paramDescriptions.length > 0 ? paramDescriptions : 
+                        params.filter(p => p).map(p => ({
+                            name: p,
+                            type: 'any',
+                            description: `Parameter ${p}`
+                        })),
+                    returns: returnType,
+                    example: `// Example of using ${funcName}:\nconst result = ${funcName}(${params.join(', ')});`
+                });
+            }
+        });
+        
+        // Add script functions to engineKeywords for code hints
+        if (window.engineKeywords && Array.isArray(window.engineKeywords)) {
+            // Remove old script functions first 
+            window.engineKeywords = window.engineKeywords.filter(k => !k.name.includes('_script_function_'));
+            
+            // Add each script function with a special tag to identify them
+            scriptFunctions.forEach(func => {
+                // Make a copy to avoid modifying the original
+                const funcCopy = {...func};
+                funcCopy._script_function_ = true;  // Mark as script function
+                window.engineKeywords.push(funcCopy);
+            });
+            
+            console.log(`Synced ${scriptFunctions.length} script functions to code hints`);
+        }
+        
+        // Force refresh of code hints
+        if (window.codeHintSystem && typeof window.codeHintSystem.refresh === 'function') {
+            window.codeHintSystem.refresh();
+        }
     }
 
     function handleResourceUpdate() {

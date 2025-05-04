@@ -1,315 +1,312 @@
-/* Code Hint System Styles */
+/**
+ * Code Hint System Styles - Enhanced for Object Events
+ */
 
-.code-hint-container {
-    position: absolute;
-    left: 0;
-    top: 100%; /* Position it just below the editor */
-    z-index: 100;
-    width: 100%;
-    background: #232323;
-    border-top: 1px solid #444;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-    display: block !important; /* Force visibility */
-}
-
-.code-hint-resize-handle {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 5px;
-    cursor: ns-resize;
-    background: linear-gradient(to bottom, rgba(85,85,85,0.7) 0%, rgba(85,85,85,0) 100%);
-    z-index: 10;
-}
-
-.code-hint-panel {
-    padding: 10px;
-    height: calc(100% - 35px);
-    overflow-y: auto;
-    font-size: 13px;
-    line-height: 1.5;
-}
-
-.code-hint-help-button {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background-color: #666;
-    color: white;
-    text-align: center;
-    line-height: 20px;
-    cursor: pointer;
-    font-weight: bold;
-    transition: background-color 0.2s;
-    z-index: 11;
-}
-
-.code-hint-help-button:hover {
-    background-color: #888;
-}
-
-.hint-item {
-    padding: 2px 5px;
-    cursor: pointer;
-    border-radius: 3px;
-    color: #f8f8f2;
-    margin-bottom: 3px;
-    display: inline-block;
-    margin-right: 8px;
-}
-
-.hint-item:hover {
-    background-color: #444;
-}
-
-.hint-item.function {
-    color: #66d9ef;
-}
-
-.hint-item.constant {
-    color: #ae81ff;
-}
-
-.hint-item.property {
-    color: #a6e22e;
-}
-
-.hint-function-details {
-    padding: 5px;
-    margin-top: 10px;
-    border-top: 1px solid #444;
-}
-
-.hint-function-signature {
-    font-weight: bold;
-    color: #66d9ef;
-    margin-bottom: 5px;
-}
-
-.hint-param {
-    margin-left: 15px;
-    display: block;
-    color: #f8f8f2;
-}
-
-.hint-param .param-name {
-    color: #fd971f;
-}
-
-.hint-param .param-type {
-    color: #a6e22e;
-}
-
-.hint-section {
-    margin-bottom: 10px;
-}
-
-.hint-section-title {
-    font-weight: bold;
-    margin-bottom: 5px;
-    color: #f92672;
-}
-
-/* Documentation modal styles */
-.doc-modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.7);
-    z-index: 1000;
+/* Fix for object event editor */
+#eventCodeEditor {
     display: flex;
-    justify-content: center;
-    align-items: center;
+    flex-direction: column;
+    height: 100%;
+    border: 1px solid #333;
+    border-radius: 4px;
     overflow: hidden;
 }
 
-.doc-modal {
-    background-color: #2d2d2d;
-    border-radius: 5px;
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-    width: 80%;
-    max-width: 1000px;
-    max-height: 85vh;
+/* Main container for editor and hints - key fix for gap issue */
+.editor-hint-wrapper {
     display: flex;
     flex-direction: column;
+    height: 100%;
+    flex: 1;
+    min-height: 300px;
+    overflow: hidden; /* Prevents any spacing from overflow */
+    margin: 0;
+    padding: 0;
+    border: 1px solid #333;
+    border-radius: 4px;
 }
 
-.doc-modal-header {
-    padding: 15px;
-    border-bottom: 1px solid #444;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+/* Remove any internal borders that cause double borders */
+.editor-hint-wrapper .CodeMirror {
+    flex: 1;
+    min-height: 200px !important;
+    border: none !important; /* Remove internal borders */
+    margin: 0 !important; /* Remove margins */
+    border-radius: 4px 4px 0 0; /* Round only top corners */
 }
 
-.doc-modal-title {
-    font-size: 18px;
-    font-weight: bold;
-    color: #f8f8f2;
-}
-
-.doc-modal-close {
-    background: none;
+/* Fix resizer and ensure it has zero height when not hovered */
+.resizer {
+    height: 4px;
+    background-color: #333;
+    cursor: ns-resize;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    flex-shrink: 0;
+    z-index: 10;
     border: none;
-    color: #f8f8f2;
-    font-size: 24px;
-    cursor: pointer;
 }
 
-.doc-modal-sidebar {
-    width: 200px;
-    border-right: 1px solid #444;
-    padding: 10px;
-    overflow-y: auto;
+.resizer:hover {
+    background-color: #555;
 }
 
-.doc-category {
-    margin-bottom: 15px;
+/* Ensure the hint container sits directly below CodeMirror with no gap */
+.code-hint-container {
+    background-color: #1e1e1e;
+    color: #ddd;
+    border-top: 1px solid #333; /* Only top border */
+    padding: 8px;
+    box-sizing: border-box;
+    font-family: Monaco, Menlo, "Ubuntu Mono", Consolas, source-code-pro, monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    overflow: auto;
+    height: 200px;
+    max-height: 40vh;
+    width: 100%;
+    flex-shrink: 0;
+    margin: 0;
+    border-radius: 0 0 4px 4px; /* Round only bottom corners */
+    position: relative;
 }
 
-.doc-category-title {
+/* Object Editor specific fixes */
+#eventCodeEditor .editor-hint-wrapper {
+    height: 100%;
+    min-height: 300px;
+    display: flex;
+    flex-direction: column;
+    border: none; /* Remove duplicate borders */
+}
+
+#eventCodeEditor .CodeMirror {
+    flex-grow: 1;
+    height: auto !important;
+}
+
+#eventCodeEditor .code-hint-container {
+    height: 200px;
+    flex-grow: 0;
+    flex-shrink: 0;
+}
+
+/* Script Editor specific fixes */
+#scriptEditArea .editor-hint-wrapper {
+    height: 100%;
+}
+
+/* Fix for the script editor tab which may have different structure */
+#scriptEditArea {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+/* Prevent margin collapse that can cause gaps */
+.hint-section {
+    margin-bottom: 12px;
+    overflow: hidden; /* Prevent margin collapse */
+}
+
+/* Rest of existing styles */
+.hint-section-title {
     font-weight: bold;
+    color: #88ccff;
     margin-bottom: 5px;
-    color: #f92672;
+    padding-bottom: 3px;
+    border-bottom: 1px solid #444;
 }
 
-.doc-function-list {
-    list-style-type: none;
+.keyword-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.hint-item {
+    padding: 3px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+    background-color: #2a2a2a;
+    border: 1px solid #444;
+    display: inline-block;
+    transition: background-color 0.1s;
+    user-select: none;
+}
+
+.hint-item:hover {
+    background-color: #3a3a3a;
+}
+
+.hint-item.function {
+    color: #dcdcaa;
+    border-color: #5f5a41;
+}
+
+.hint-item.property {
+    color: #9cdcfe;
+    border-color: #4c5b66;
+}
+
+.hint-item.constant {
+    color: #4ec9b0;
+    border-color: #2d544b;
+}
+
+.hint-function-details {
+    background-color: #252525;
+    border-radius: 4px;
+    padding: 8px;
+    margin-top: 10px;
+}
+
+.hint-function-signature {
+    font-family: monospace;
+    color: #dcdcaa;
+    padding: 4px;
+    background-color: #303030;
+    border-radius: 3px;
+    margin-bottom: 8px;
+    overflow-x: auto;
+}
+
+.hint-function-description {
+    margin-bottom: 8px;
+    line-height: 1.4;
+}
+
+.hint-parameters {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 8px;
+}
+
+.hint-param {
+    padding-left: 12px;
+    border-left: 2px solid #444;
+}
+
+.param-name {
+    color: #9cdcfe;
+}
+
+.param-type {
+    color: #4ec9b0;
+    opacity: 0.8;
+}
+
+.current-param {
+    background-color: #3c3c3c;
+    border-left-color: #569cd6;
+    font-weight: bold;
+}
+
+.hint-return {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #444;
+}
+
+code {
+    background-color: #333;
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-family: monospace;
+}
+
+.code-hint-panel {
+    height: 100%;
+    overflow: auto;
     padding: 0;
     margin: 0;
 }
 
-.doc-function-item {
-    padding: 3px 5px;
-    cursor: pointer;
-    border-radius: 3px;
-}
-
-.doc-function-item:hover {
-    background-color: #444;
-}
-
-.doc-function-item.selected {
-    background-color: #374151;
-}
-
-.doc-modal-content {
-    display: flex;
-    flex: 1;
-    overflow: hidden;
-}
-
-.doc-modal-body {
-    flex: 1;
-    padding: 15px;
-    overflow-y: auto;
-}
-
-.doc-function-detail {
-    margin-bottom: 20px;
-}
-
-.doc-function-name {
-    font-size: 18px;
-    font-weight: bold;
-    color: #66d9ef;
-    margin-bottom: 10px;
-}
-
-.doc-function-description {
-    margin-bottom: 15px;
-    line-height: 1.5;
-}
-
-.doc-function-params {
-    margin-bottom: 15px;
-}
-
-.doc-param-item {
-    margin-bottom: 5px;
-}
-
-.doc-param-name {
-    color: #fd971f;
-    font-weight: bold;
-}
-
-.doc-param-type {
-    color: #a6e22e;
-    margin-left: 5px;
-}
-
-.doc-function-return {
-    margin-bottom: 15px;
-}
-
-.doc-function-example {
-    background-color: #222;
-    padding: 10px;
-    border-radius: 3px;
-    font-family: monospace;
-    white-space: pre-wrap;
-}
-
-/* For documentation search */
-.doc-search-container {
-    padding: 10px 15px;
-    border-bottom: 1px solid #444;
-}
-
-.doc-search-input {
-    width: 100%;
-    padding: 8px;
-    background-color: #333;
-    border: 1px solid #555;
-    border-radius: 4px;
-    color: #f8f8f2;
-    font-size: 14px;
-}
-
-.doc-search-input:focus {
-    outline: none;
-    border-color: #66d9ef;
-}
-
-/* For highlighted params in the function signature */
-.current-param {
-    background-color: rgba(255, 255, 0, 0.2);
-    font-weight: bold;
-    padding: 0 2px;
-    border-radius: 2px;
-}
-
-.search-highlight {
-    background-color: rgba(255, 166, 0, 0.3);
-    border-radius: 2px;
-}
-
-/* Code snippet styles */
-.hint-section code {
-    background-color: #333;
-    padding: 1px 4px;
-    border-radius: 3px;
-    font-family: monospace;
-}
-
-/* Keyword list container */
-.keyword-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-    margin-bottom: 10px;
-}
-
 .editor-hint-wrapper {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 300px;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+    border: 1px solid #333;
+    border-radius: 4px;
+    position: relative; /* Add this */
+}
+
+/* Update CodeMirror container to fill available space */
+.editor-hint-wrapper .CodeMirror {
+    flex: 1;
+    min-height: 200px !important;
+    border: none !important;
+    margin: 0 !important;
+    border-radius: 4px 4px 0 0;
+    height: auto !important; /* Add this */
+    position: relative; /* Add this */
+}
+
+/* Fix the hint container positioning */
+.code-hint-container {
+    background-color: #1e1e1e;
+    color: #ddd;
+    border-top: 1px solid #333;
+    padding: 8px;
+    box-sizing: border-box;
+    font-family: Monaco, Menlo, "Ubuntu Mono", Consolas, source-code-pro, monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    overflow: auto;
+    height: 200px;
+    max-height: 40vh;
     width: 100%;
-    min-width: 0;
-    display: block;
+    flex-shrink: 0;
+    margin: 0;
+    border-radius: 0 0 4px 4px;
     position: relative;
+    display: block !important; /* Add this */
+}
+
+/* Add styles for the event editor specifically */
+#eventCodeEditor .editor-hint-wrapper {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    border: none;
+}
+
+#eventCodeEditor .CodeMirror {
+    flex-grow: 1;
+    height: auto !important;
+}
+
+#eventCodeEditor .code-hint-container {
+    height: 200px;
+    flex-shrink: 0;
+}
+
+/* Fix the resizer styling */
+.resizer {
+    height: 4px;
+    background-color: #333;
+    cursor: ns-resize;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    flex-shrink: 0;
+    z-index: 10;
+    border: none;
+    position: relative; /* Add this */
+}
+
+/* Add a fix for the event editor container */
+.event-code-editor {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    height: 100%;
+    overflow: hidden;
 }
