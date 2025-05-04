@@ -250,19 +250,32 @@ function create_physics_module() {
 
 // Add the function to the engine
 (function() {
-    // Direct assignment to window (critical for GitHub Pages)
-    window.create_physics_module = create_physics_module;
-    
-    // Try to register directly if window.engine exists
-    if (window.engine) {
-        window.engine.create_physics_module = create_physics_module;
-        console.log('Physics module registered directly to engine');
-    } 
-    
-    // Try the register helper function too (make sure we pass the KEY "create_physics_module")
-    if (typeof window.registerModule === 'function') {
-        // Pass the correct KEY NAME that matches the function name pattern
-        window.registerModule('create_physics_module', create_physics_module);
-        console.log('Physics module registered via helper function');
+    // Create a more reliable registration function
+    function ensureModuleRegistered() {
+        // Direct assignment to window
+        window.create_physics_module = create_physics_module;
+        
+        // Try to register with the engine directly
+        if (window.engine) {
+            window.engine.create_physics_module = create_physics_module;
+            console.log('Physics module registered directly to engine');
+        }
+        
+        // Try the register helper function
+        if (typeof window.registerModule === 'function') {
+            window.registerModule('create_physics_module', create_physics_module);
+            console.log('Physics module registered via helper function');
+        }
+        
+        // Signal that this module has loaded
+        if (window.moduleRegistry && window.moduleRegistry.loaded) {
+            window.moduleRegistry.loaded.create_physics_module = true;
+        }
     }
+    
+    // Try immediately
+    ensureModuleRegistered();
+    
+    // Also try after a short delay to catch race conditions
+    setTimeout(ensureModuleRegistered, 100);
 })();

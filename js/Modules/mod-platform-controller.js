@@ -341,19 +341,32 @@ function create_platformer_module() {
 }
 
 (function() {
-    // Try to register directly if window.engine exists
-    if (window.engine) {
-        window.engine['create_platformer_module'] = create_platformer_module;
-        console.log('Platformer module registered directly to engine');
-    } 
-    
-    // Always register through the helper function as well for redundancy
-    if (typeof window.registerModule === 'function') {
-        window.registerModule('create_platformer_module', create_platformer_module);
-        console.log('Platformer module registered via helper function');
-    } else {
-        // Last resort fallback - store on window for later attachment
-        window['create_platformer_module'] = create_platformer_module;
-        console.log('Platformer module stored on window for later attachment');
+    // Create a more reliable registration function
+    function ensureModuleRegistered() {
+        // Direct assignment to window
+        window.create_platformer_module = create_platformer_module;
+        
+        // Try to register with the engine directly
+        if (window.engine) {
+            window.engine.create_platformer_module = create_platformer_module;
+            console.log('Platformer module registered directly to engine');
+        }
+        
+        // Try the register helper function
+        if (typeof window.registerModule === 'function') {
+            window.registerModule('create_platformer_module', create_platformer_module);
+            console.log('Platformer module registered via helper function');
+        }
+        
+        // Signal that this module has loaded
+        if (window.moduleRegistry && window.moduleRegistry.loaded) {
+            window.moduleRegistry.loaded.create_platformer_module = true;
+        }
     }
+    
+    // Try immediately
+    ensureModuleRegistered();
+    
+    // Also try after a short delay to catch race conditions
+    setTimeout(ensureModuleRegistered, 100);
 })();

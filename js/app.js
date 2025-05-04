@@ -18,10 +18,63 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
+    // Create a module tracking system
+    window.moduleRegistry = {
+        expected: ['create_physics_module', 'create_platformer_module'],
+        loaded: {},
+        waitForModules: function(callback, timeout = 5000) {
+            const startTime = Date.now();
+            const checkModules = () => {
+                // Check if all expected modules are loaded
+                const allLoaded = this.expected.every(modName => 
+                    this.loaded[modName] || 
+                    (typeof window[modName] === 'function') ||
+                    (window.engine && typeof window.engine[modName] === 'function')
+                );
+                
+                if (allLoaded) {
+                    console.log("All modules loaded successfully!");
+                    // Ensure all modules are attached to the engine
+                    this.expected.forEach(modName => {
+                        if (!window.engine[modName] && window[modName]) {
+                            window.engine[modName] = window[modName];
+                            console.log(`Attached ${modName} to engine from window`);
+                        }
+                    });
+                    callback();
+                    return;
+                }
+                
+                // Check timeout
+                if (Date.now() - startTime > timeout) {
+                    console.error("Module loading timed out!");
+                    console.error("Missing modules:", this.expected.filter(modName => 
+                        !this.loaded[modName] && 
+                        !(typeof window[modName] === 'function') &&
+                        !(window.engine && typeof window.engine[modName] === 'function')
+                    ));
+                    callback(new Error("Module loading timed out"));
+                    return;
+                }
+                
+                // Try again in a bit
+                setTimeout(checkModules, 50);
+            };
+            
+            checkModules();
+        }
+    };
+
     // Create a module registration helper
     window.registerModule = function(name, moduleCreator) {
+        console.log(`Registering module: ${name}`);
+        
+        // Track that this module is loaded
+        window.moduleRegistry.loaded[name] = true;
+        
         if (window.engine) {
             window.engine[name] = moduleCreator;
+            console.log(`Module ${name} attached to engine`);
         } else {
             console.warn(`Engine not available when registering ${name}. Will attach later.`);
             window[name] = moduleCreator;
@@ -859,137 +912,123 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const originalStartGame = startGame;
     function startGame() {
-        let gameCode = '';
-        
-        // Include scripts if available
-        if (window.ScriptEditor) {
-            const scriptsCode = window.ScriptEditor.generateScriptsCode();
-            gameCode += scriptsCode;
-        }
-        
-        // Set canvas dimensions from settings
-        const width = parseInt(canvasWidthSetting.value) || 640;
-        const height = parseInt(canvasHeightSetting.value) || 480;
-        
-        const canvas = document.getElementById('gameCanvas');
-        canvas.width = width;
-        canvas.height = height;
-        
-        if (game) {
-            game.room_width = width;
-            game.room_height = height;
-            game.view_wview = width;
-            game.view_hview = height;
+        // Wait for all modules to load before starting the game
+        window.moduleRegistry.waitForModules(() => {
+            let gameCode = '';
             
-            // IMPORTANT: Manually make sure engine is available to window
-            window.engine = game;
-
-            // Ensure global functions are registered
-            if (typeof window_global_functions === 'function') {
-                window_global_functions();
+            // Include scripts if available
+            if (window.ScriptEditor) {
+                const scriptsCode = window.ScriptEditor.generateScriptsCode();
+                gameCode += scriptsCode;
             }
-        }
-
-        window_global_functions();
-        
-        // Apply screen fit
-        applyScreenFitToCanvas();
-
-         // This ensures they're available even if window-global-functions.js has issues
-        window.object_add = function() { return window.engine.object_add(); };
-        window.instance_create = function(x, y, object) { return window.engine.instance_create(x, y, object); };
-        window.keyboard_check = function(keyCode) { return keyStates[keyCode] === true; };
-        window.keyboard_check_pressed = function(keyCode) { return window.engine.keyboard_check_pressed(keyCode); };
-        window.draw_set_color = function(color) { return window.engine.draw_set_color(color); };
-        window.draw_rectangle = function(x1, y1, x2, y2, outline) { return window.engine.draw_rectangle(x1, y1, x2, y2, outline); };
-        window.draw_text = function(x, y, text) { return window.engine.draw_text(x, y, text); };
-        
-        // Copy basic constants
-        window.c_white = window.engine.c_white;
-        window.c_black = window.engine.c_black;
-        window.c_red = window.engine.c_red;
-        window.c_blue = window.engine.c_blue;
-        window.c_green = window.engine.c_green;
-        window.c_yellow = window.engine.c_yellow;
-        window.c_gray = window.engine.c_gray;
-        window.c_ltgray = window.engine.c_ltgray;
-        window.c_dkgray = window.engine.c_dkgray;
-        
-        // Key constants
-        window.vk_left = window.engine.vk_left;
-        window.vk_right = window.engine.vk_right;
-        window.vk_up = window.engine.vk_up;
-        window.vk_down = window.engine.vk_down;
-        window.vk_space = window.engine.vk_space;
-        
-        // Room properties
-        window.room_width = window.engine.room_width;
-        window.room_height = window.engine.room_height;
-
-        // Generate resource code
-        const resourcesCode = generateResourcesCode();
-        gameCode += resourcesCode;
-        
-        // Generate object definitions
-        gameObjects.forEach(obj => {
-            gameCode += `// Create ${obj.name} object\n`;
-            gameCode += `const ${obj.name} = object_add();\n\n`;
             
-            // Add event handlers
-            Object.keys(obj.events).forEach(event => {
-                if (obj.events[event] && obj.events[event].trim()) {
-                    gameCode += `${obj.name}.${event} = function() {\n`;
-                    gameCode += `  ${obj.events[event].replace(/\n/g, '\n  ')}\n`;
-                    gameCode += `};\n\n`;
+            // Set canvas dimensions from settings
+            const width = parseInt(canvasWidthSetting.value) || 640;
+            const height = parseInt(canvasHeightSetting.value) || 480;
+            
+            const canvas = document.getElementById('gameCanvas');
+            canvas.width = width;
+            canvas.height = height;
+            
+            if (game) {
+                game.room_width = width;
+                game.room_height = height;
+                game.view_wview = width;
+                game.view_hview = height;
+                
+                // IMPORTANT: Manually make sure engine is available to window
+                window.engine = game;
+
+                // Log available modules for debugging
+                console.log("Available modules before game start:", 
+                    Object.keys(window.engine).filter(key => key.startsWith('create_')));
+                
+                // Ensure global functions are registered
+                if (typeof window_global_functions === 'function') {
+                    window_global_functions();
                 }
+            }
+
+            window_global_functions();
+            
+            // Apply screen fit
+            applyScreenFitToCanvas();
+
+            // This ensures they're available even if window-global-functions.js has issues
+            window.object_add = function() { return window.engine.object_add(); };
+            window.instance_create = function(x, y, object) { return window.engine.instance_create(x, y, object); };
+            window.keyboard_check = function(keyCode) { return keyStates[keyCode] === true; };
+            window.keyboard_check_pressed = function(keyCode) { return window.engine.keyboard_check_pressed(keyCode); };
+            window.draw_set_color = function(color) { return window.engine.draw_set_color(color); };
+            window.draw_rectangle = function(x1, y1, x2, y2, outline) { return window.engine.draw_rectangle(x1, y1, x2, y2, outline); };
+            window.draw_text = function(x, y, text) { return window.engine.draw_text(x, y, text); };
+            
+            // Rest of your original startGame function...
+            // Generate resource code
+            const resourcesCode = generateResourcesCode();
+            gameCode += resourcesCode;
+            
+            // Generate object definitions
+            gameObjects.forEach(obj => {
+                gameCode += `// Create ${obj.name} object\n`;
+                gameCode += `const ${obj.name} = object_add();\n\n`;
+                
+                // Add event handlers
+                Object.keys(obj.events).forEach(event => {
+                    if (obj.events[event] && obj.events[event].trim()) {
+                        gameCode += `${obj.name}.${event} = function() {\n`;
+                        gameCode += `  ${obj.events[event].replace(/\n/g, '\n  ')}\n`;
+                        gameCode += `};\n\n`;
+                    }
+                });
             });
-        });
-        
-        // Generate level code
-        if (window.LevelEditor) {
-            const levelCode = window.LevelEditor.generateCode();
-            if (levelCode) {
-                gameCode += levelCode;
+            
+            // Generate level code
+            if (window.LevelEditor) {
+                const levelCode = window.LevelEditor.generateCode();
+                if (levelCode) {
+                    gameCode += levelCode;
+                } else {
+                    // Fallback: create instances at center if no levels defined
+                    gameObjects.forEach(obj => {
+                        gameCode += `// Create ${obj.name} instance\n`;
+                        gameCode += `const ${obj.name}_inst = instance_create(room_width / 2, room_height / 2, ${obj.name});\n\n`;
+                    });
+                }
             } else {
-                // Fallback: create instances at center if no levels defined
+                // Fallback if level editor not available
                 gameObjects.forEach(obj => {
                     gameCode += `// Create ${obj.name} instance\n`;
                     gameCode += `const ${obj.name}_inst = instance_create(room_width / 2, room_height / 2, ${obj.name});\n\n`;
                 });
             }
-        } else {
-            // Fallback if level editor not available
-            gameObjects.forEach(obj => {
-                gameCode += `// Create ${obj.name} instance\n`;
-                gameCode += `const ${obj.name}_inst = instance_create(room_width / 2, room_height / 2, ${obj.name});\n\n`;
-            });
-        }
-        
-        // Set the code to the textbox (used by gameEngine)
-        const textbox = document.getElementById('textbox');
-        if (textbox) {
-            textbox.value = gameCode;
-        }
-        
-        // Switch to canvas tab
-        const canvasTabBtn = document.querySelector('[data-tab="canvas"]');
-        if (canvasTabBtn) {
-            canvasTabBtn.click();
-        }
-        
-        // Start the game
-        game.gameRestartEval();
+            
+            // Set the code to the textbox (used by gameEngine)
+            const textbox = document.getElementById('textbox');
+            if (textbox) {
+                textbox.value = gameCode;
+            }
+            
+            // Switch to canvas tab
+            const canvasTabBtn = document.querySelector('[data-tab="canvas"]');
+            if (canvasTabBtn) {
+                canvasTabBtn.click();
+            }
+            
+            // Start the game
+            game.gameRestartEval();
 
-        // Ensure global functions are registered
-        if (typeof window_global_functions === 'function') {
-            window_global_functions();
-        }
-        
-        // Update button states
-        playBtn.disabled = true;
-        stopBtn.disabled = false;
-        isGameRunning = true;
-    };
+            // Ensure global functions are registered
+            if (typeof window_global_functions === 'function') {
+                window_global_functions();
+            }
+            
+            // Update button states
+            playBtn.disabled = true;
+            stopBtn.disabled = false;
+            isGameRunning = true;
+        });
+    }
     
     // Generate code from all objects
     function generateGameCode() {
@@ -1120,17 +1159,147 @@ document.addEventListener('DOMContentLoaded', () => {
     // New Project
     newProject.addEventListener('click', () => {
         if (confirm('Starting a new project will discard any unsaved changes. Continue?')) {
+            // First, stop any running game
+            if (isGameRunning) {
+                stopGame();
+            }
+    
+            // 1. Reset game objects and folders
             gameObjects = [];
             folders = [];
             selectedObject = null;
             selectedEvent = null;
-            
+    
+            // 2. Reset the script editor
+            if (window.ScriptEditor) {
+                window.ScriptEditor.setScriptsData([], []);
+                // Add default utility script as a starting point
+                window.ScriptEditor.addScript('Utilities', `/**
+     * Utility Functions
+     * Common helper functions that can be used in your game
+     */
+    
+    /**
+     * Calculate distance between two points
+     * 
+     * @param {number} x1 - X coordinate of first point
+     * @param {number} y1 - Y coordinate of first point
+     * @param {number} x2 - X coordinate of second point
+     * @param {number} y2 - Y coordinate of second point
+     * @returns {number} - Distance between points
+     */
+    function util_distance(x1, y1, x2, y2) {
+        return Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+    }
+    
+    /**
+     * Get random integer between min and max (inclusive)
+     * 
+     * @param {number} min - Minimum value
+     * @param {number} max - Maximum value
+     * @returns {number} - Random integer
+     */
+    function util_random_int(min, max) {
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+    `);
+            }
+    
+            // 3. Reset level editor
+            if (window.LevelEditor) {
+                window.LevelEditor.setLevels([]);
+            }
+    
+            // 4. Reset resources
+            resources = {
+                sprites: [],
+                backgrounds: [],
+                sounds: [],
+                fonts: [],
+                data: []
+            };
+            window.resources = resources;
+    
+            // Update any resource displays
+            if (document.querySelector('.resource-type.active')) {
+                const activeType = document.querySelector('.resource-type.active').getAttribute('data-type');
+                if (renderResourcesList) {
+                    renderResourcesList(activeType);
+                }
+            }
+    
+            // 5. Reset the game engine state
+            if (game) {
+                // Reset game canvas dimensions to default values
+                game.room_width = parseInt(canvasWidthSetting.value) || 640;
+                game.room_height = parseInt(canvasHeightSetting.value) || 480;
+                game.view_wview = game.room_width;
+                game.view_hview = game.room_height;
+    
+                // Reset canvas
+                const canvas = document.getElementById('gameCanvas');
+                if (canvas) {
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = game.room_width;
+                    canvas.height = game.room_height;
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    
+                    // Apply screen fit to reset canvas appearance
+                    applyScreenFitToCanvas();
+                }
+    
+                // Clear any game instances and their state
+                if (game.gameObjects) {
+                    game.gameObjects.forEach(obj => {
+                        if (obj.instances) {
+                            obj.instances = [];
+                        }
+                    });
+                }
+            }
+    
+            // 6. Clear the game console if it exists
+            if (window.GameConsole && typeof window.GameConsole.clear === 'function') {
+                window.GameConsole.clear();
+                window.GameConsole.info("New project started");
+            }
+    
+            // 7. Reset any editor tabs to default state
+            // Switch to objects tab by default
+            const objectsTabBtn = document.querySelector('[data-tab="objects"]');
+            if (objectsTabBtn) {
+                objectsTabBtn.click();
+            }
+    
+            // 8. Update UI to reflect reset
             renderObjectsList();
             updateObjectDetailView();
-            
-            if (isGameRunning) {
-                stopGame();
-            }
+    
+            // 9. Add a default object to help get started
+            const newObject = {
+                id: generateId(),
+                name: 'objPlayer',
+                type: 'object',
+                isPriority : false,
+                events: {
+                    awake: '// Initialize object\nthis.x = room_width / 2;\nthis.y = room_height / 2;\nthis.width = 32;\nthis.height = 32;\nthis.color = c_blue;\n',
+                    loop: '// Object update logic\nif (keyboard_check(vk_right)) this.x += 2;\nif (keyboard_check(vk_left)) this.x -= 2;\nif (keyboard_check(vk_up)) this.y -= 2;\nif (keyboard_check(vk_down)) this.y += 2;\n',
+                    draw: '// Draw object\ndraw_set_color(this.color);\ndraw_rectangle(this.x, this.y, this.x + this.width, this.y + this.height, false);\n',
+                    loop_begin: '// Begin of loop logic\n',
+                    loop_end: '// End of loop logic\n',
+                    draw_gui: '// Draw GUI logic\n',
+                },
+                folderId: null
+            };
+            gameObjects.push(newObject);
+            renderObjectsList();
+            selectObject(newObject.id);
+    
+            // 10. Update the window reference
+            window.gameObjects = gameObjects;
+    
+            // 11. Show confirmation to the user
+            console.log("Project reset to initial state");
         }
     });
 
@@ -1149,6 +1318,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // Process each resource type
             for (const type in resources) {
                 resourcesForSave[type] = [];
+                
+                // Create directory for each resource type
+                zip.folder(`resources/${type}`);
                 
                 for (const resource of resources[type]) {
                     // Create a resource entry without circular references
@@ -1194,7 +1366,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (window.LevelEditor) {
                 levelsData = window.LevelEditor.getLevels();
             }
-
+    
             // Get scripts data if available
             let scriptsData = { scripts: [], scriptFolders: [] };
             if (window.ScriptEditor) {
@@ -1213,7 +1385,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     canvasWidth: parseInt(canvasWidthSetting.value),
                     canvasHeight: parseInt(canvasHeightSetting.value),
                     screenFitMode: screenFitSetting.value
-                }
+                },
+                version: '1.0.0' // Add version for future compatibility checks
             };
             
             // Add the project data JSON to the ZIP
@@ -1222,8 +1395,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // Generate the ZIP file
             const zipBlob = await zip.generateAsync({type: "blob"});
             
-            // Save the ZIP file using FileSaver.js
-            saveAs(zipBlob, "isothermal-project.zip");
+            // Save the ZIP file using FileSaver.js with .iproj extension
+            saveAs(zipBlob, "isothermal-project.iproj");
             
         } catch (error) {
             console.error("Error saving project:", error);
@@ -1234,7 +1407,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Load Project
     loadProject.addEventListener('click', () => {
         // Update the accept attribute to handle ZIP files
-        loadFileInput.accept = '.zip';
+        loadFileInput.accept = 'iproj,.zip';
         loadFileInput.click();
     });
 
@@ -1243,14 +1416,19 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!file) return;
         
         try {
-            // Check if it's a ZIP file
-            if (file.name.toLowerCase().endsWith('.zip')) {
+            // Check if it's a ZIP or IPROJ file
+            if (file.name.toLowerCase().endsWith('.zip') || file.name.toLowerCase().endsWith('.iproj')) {
                 // Read the ZIP file
                 const zip = await JSZip.loadAsync(file);
                 
                 // Load the project.json file
                 const projectDataText = await zip.file("project.json").async("text");
                 const projectData = JSON.parse(projectDataText);
+                
+                // Before loading, stop any running game
+                if (isGameRunning) {
+                    stopGame();
+                }
                 
                 // Load objects and folders
                 if (projectData.gameObjects) {
@@ -1259,6 +1437,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (projectData.folders) {
                     folders = projectData.folders;
                 }
+                
                 // Load scripts if available
                 if (projectData.scripts && window.ScriptEditor) {
                     window.ScriptEditor.setScriptsData(projectData.scripts, projectData.scriptFolders);
@@ -1271,6 +1450,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Reset resources
                 resources = {
                     sprites: [],
+                    backgrounds: [],
                     sounds: [],
                     fonts: [],
                     data: []
@@ -1301,7 +1481,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                         resource.file = fileData;
                                         
                                         // Load additional properties based on resource type
-                                        if (type === 'sprites') {
+                                        if (type === 'sprites' || type === 'backgrounds') {
                                             const img = new Image();
                                             img.onload = () => {
                                                 resource.width = img.width;
@@ -1363,18 +1543,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (activeType) {
                     renderResourcesList(activeType.getAttribute('data-type'));
                 }
+                
+                // Provide feedback about the loaded project
+                console.log("Project loaded successfully");
+                console.log(`Loaded ${gameObjects.length} objects, ${resources.sprites.length} sprites, ${resources.sounds.length} sounds`);
+                
+                // Show success message
+                alert(`Project loaded successfully!
+    - ${gameObjects.length} objects
+    - ${projectData.scripts ? projectData.scripts.length : 0} scripts
+    - ${resources.sprites.length + resources.backgrounds.length + resources.sounds.length + resources.fonts.length + resources.data.length} resources`);
             } else {
                 // Handle old JSON format for backwards compatibility
-                const reader = new FileReader();
-                reader.onload = function(event) {
-                    try {
-                        const projectData = JSON.parse(event.target.result);
-                        // ... existing JSON loading code ...
-                    } catch (err) {
-                        alert('Error loading project: ' + err.message);
-                    }
-                };
-                reader.readAsText(file);
+                alert("This file format is not supported. Please use .iproj files.");
             }
             
             // Reset the file input
