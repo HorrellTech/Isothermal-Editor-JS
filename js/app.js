@@ -912,123 +912,137 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const originalStartGame = startGame;
     function startGame() {
-        // Wait for all modules to load before starting the game
-        window.moduleRegistry.waitForModules(() => {
-            let gameCode = '';
+        let gameCode = '';
+        
+        // Include scripts if available
+        if (window.ScriptEditor) {
+            const scriptsCode = window.ScriptEditor.generateScriptsCode();
+            gameCode += scriptsCode;
+        }
+        
+        // Set canvas dimensions from settings
+        const width = parseInt(canvasWidthSetting.value) || 640;
+        const height = parseInt(canvasHeightSetting.value) || 480;
+        
+        const canvas = document.getElementById('gameCanvas');
+        canvas.width = width;
+        canvas.height = height;
+        
+        if (game) {
+            game.room_width = width;
+            game.room_height = height;
+            game.view_wview = width;
+            game.view_hview = height;
             
-            // Include scripts if available
-            if (window.ScriptEditor) {
-                const scriptsCode = window.ScriptEditor.generateScriptsCode();
-                gameCode += scriptsCode;
-            }
-            
-            // Set canvas dimensions from settings
-            const width = parseInt(canvasWidthSetting.value) || 640;
-            const height = parseInt(canvasHeightSetting.value) || 480;
-            
-            const canvas = document.getElementById('gameCanvas');
-            canvas.width = width;
-            canvas.height = height;
-            
-            if (game) {
-                game.room_width = width;
-                game.room_height = height;
-                game.view_wview = width;
-                game.view_hview = height;
-                
-                // IMPORTANT: Manually make sure engine is available to window
-                window.engine = game;
-
-                // Log available modules for debugging
-                console.log("Available modules before game start:", 
-                    Object.keys(window.engine).filter(key => key.startsWith('create_')));
-                
-                // Ensure global functions are registered
-                if (typeof window_global_functions === 'function') {
-                    window_global_functions();
-                }
-            }
-
-            window_global_functions();
-            
-            // Apply screen fit
-            applyScreenFitToCanvas();
-
-            // This ensures they're available even if window-global-functions.js has issues
-            window.object_add = function() { return window.engine.object_add(); };
-            window.instance_create = function(x, y, object) { return window.engine.instance_create(x, y, object); };
-            window.keyboard_check = function(keyCode) { return keyStates[keyCode] === true; };
-            window.keyboard_check_pressed = function(keyCode) { return window.engine.keyboard_check_pressed(keyCode); };
-            window.draw_set_color = function(color) { return window.engine.draw_set_color(color); };
-            window.draw_rectangle = function(x1, y1, x2, y2, outline) { return window.engine.draw_rectangle(x1, y1, x2, y2, outline); };
-            window.draw_text = function(x, y, text) { return window.engine.draw_text(x, y, text); };
-            
-            // Rest of your original startGame function...
-            // Generate resource code
-            const resourcesCode = generateResourcesCode();
-            gameCode += resourcesCode;
-            
-            // Generate object definitions
-            gameObjects.forEach(obj => {
-                gameCode += `// Create ${obj.name} object\n`;
-                gameCode += `const ${obj.name} = object_add();\n\n`;
-                
-                // Add event handlers
-                Object.keys(obj.events).forEach(event => {
-                    if (obj.events[event] && obj.events[event].trim()) {
-                        gameCode += `${obj.name}.${event} = function() {\n`;
-                        gameCode += `  ${obj.events[event].replace(/\n/g, '\n  ')}\n`;
-                        gameCode += `};\n\n`;
-                    }
-                });
-            });
-            
-            // Generate level code
-            if (window.LevelEditor) {
-                const levelCode = window.LevelEditor.generateCode();
-                if (levelCode) {
-                    gameCode += levelCode;
-                } else {
-                    // Fallback: create instances at center if no levels defined
-                    gameObjects.forEach(obj => {
-                        gameCode += `// Create ${obj.name} instance\n`;
-                        gameCode += `const ${obj.name}_inst = instance_create(room_width / 2, room_height / 2, ${obj.name});\n\n`;
-                    });
-                }
-            } else {
-                // Fallback if level editor not available
-                gameObjects.forEach(obj => {
-                    gameCode += `// Create ${obj.name} instance\n`;
-                    gameCode += `const ${obj.name}_inst = instance_create(room_width / 2, room_height / 2, ${obj.name});\n\n`;
-                });
-            }
-            
-            // Set the code to the textbox (used by gameEngine)
-            const textbox = document.getElementById('textbox');
-            if (textbox) {
-                textbox.value = gameCode;
-            }
-            
-            // Switch to canvas tab
-            const canvasTabBtn = document.querySelector('[data-tab="canvas"]');
-            if (canvasTabBtn) {
-                canvasTabBtn.click();
-            }
-            
-            // Start the game
-            game.gameRestartEval();
+            // IMPORTANT: Manually make sure engine is available to window
+            window.engine = game;
 
             // Ensure global functions are registered
             if (typeof window_global_functions === 'function') {
                 window_global_functions();
             }
+        }
+
+        window_global_functions();
+        
+        // Apply screen fit
+        applyScreenFitToCanvas();
+
+         // This ensures they're available even if window-global-functions.js has issues
+        window.object_add = function() { return window.engine.object_add(); };
+        window.instance_create = function(x, y, object) { return window.engine.instance_create(x, y, object); };
+        window.keyboard_check = function(keyCode) { return keyStates[keyCode] === true; };
+        window.keyboard_check_pressed = function(keyCode) { return window.engine.keyboard_check_pressed(keyCode); };
+        window.draw_set_color = function(color) { return window.engine.draw_set_color(color); };
+        window.draw_rectangle = function(x1, y1, x2, y2, outline) { return window.engine.draw_rectangle(x1, y1, x2, y2, outline); };
+        window.draw_text = function(x, y, text) { return window.engine.draw_text(x, y, text); };
+        
+        // Copy basic constants
+        window.c_white = window.engine.c_white;
+        window.c_black = window.engine.c_black;
+        window.c_red = window.engine.c_red;
+        window.c_blue = window.engine.c_blue;
+        window.c_green = window.engine.c_green;
+        window.c_yellow = window.engine.c_yellow;
+        window.c_gray = window.engine.c_gray;
+        window.c_ltgray = window.engine.c_ltgray;
+        window.c_dkgray = window.engine.c_dkgray;
+        
+        // Key constants
+        window.vk_left = window.engine.vk_left;
+        window.vk_right = window.engine.vk_right;
+        window.vk_up = window.engine.vk_up;
+        window.vk_down = window.engine.vk_down;
+        window.vk_space = window.engine.vk_space;
+        
+        // Room properties
+        window.room_width = window.engine.room_width;
+        window.room_height = window.engine.room_height;
+
+        // Generate resource code
+        const resourcesCode = generateResourcesCode();
+        gameCode += resourcesCode;
+        
+        // Generate object definitions
+        gameObjects.forEach(obj => {
+            gameCode += `// Create ${obj.name} object\n`;
+            gameCode += `const ${obj.name} = object_add();\n\n`;
             
-            // Update button states
-            playBtn.disabled = true;
-            stopBtn.disabled = false;
-            isGameRunning = true;
+            // Add event handlers
+            Object.keys(obj.events).forEach(event => {
+                if (obj.events[event] && obj.events[event].trim()) {
+                    gameCode += `${obj.name}.${event} = function() {\n`;
+                    gameCode += `  ${obj.events[event].replace(/\n/g, '\n  ')}\n`;
+                    gameCode += `};\n\n`;
+                }
+            });
         });
-    }
+        
+        // Generate level code
+        if (window.LevelEditor) {
+            const levelCode = window.LevelEditor.generateCode();
+            if (levelCode) {
+                gameCode += levelCode;
+            } else {
+                // Fallback: create instances at center if no levels defined
+                gameObjects.forEach(obj => {
+                    gameCode += `// Create ${obj.name} instance\n`;
+                    gameCode += `const ${obj.name}_inst = instance_create(room_width / 2, room_height / 2, ${obj.name});\n\n`;
+                });
+            }
+        } else {
+            // Fallback if level editor not available
+            gameObjects.forEach(obj => {
+                gameCode += `// Create ${obj.name} instance\n`;
+                gameCode += `const ${obj.name}_inst = instance_create(room_width / 2, room_height / 2, ${obj.name});\n\n`;
+            });
+        }
+        
+        // Set the code to the textbox (used by gameEngine)
+        const textbox = document.getElementById('textbox');
+        if (textbox) {
+            textbox.value = gameCode;
+        }
+        
+        // Switch to canvas tab
+        const canvasTabBtn = document.querySelector('[data-tab="canvas"]');
+        if (canvasTabBtn) {
+            canvasTabBtn.click();
+        }
+        
+        // Start the game
+        game.gameRestartEval();
+
+        // Ensure global functions are registered
+        if (typeof window_global_functions === 'function') {
+            window_global_functions();
+        }
+        
+        // Update button states
+        playBtn.disabled = true;
+        stopBtn.disabled = false;
+        isGameRunning = true;
+    };
     
     // Generate code from all objects
     function generateGameCode() {
@@ -2352,23 +2366,21 @@ this.score = 0;
 this.invincible = false;
 this.invincible_time = 0;
 
-// Add physics module
-const physics = this.module_add(engine.create_physics_module());
-physics.friction = 0.1;
-physics.gravity = 0.6;
-physics.max_gravity_speed = 12;
+// Create physics component using our script
+this.physics = physics_create(this);
+this.physics.friction = 0.1;
+this.physics.gravity = 0.6;
+this.physics.max_gravity_speed = 12;
 
-// Add platformer controller module
-const platformer = this.module_add(engine.create_platformer_module());
-platformer.max_speed = 4;
-platformer.jump_force = 10;
-platformer.can_jump = true;
-platformer.max_jumps = 2; // Double jump enabled`,
+// Create platformer controller using our script
+this.platformer = platformer_create(this, this.physics);
+this.platformer.max_speed = 4;
+this.platformer.jump_force = 10;
+this.platformer.max_jumps = 2; // Double jump enabled
+this.facing = 1; // Default facing direction`,
 
-        loop: `// Get modules
-const physics = this.module_get('physics');
-const platformer = this.module_get('platformer');
-if (!physics || !platformer) return;
+loop: `// Update physics and platformer components
+this.physics.update();
 
 // Handle input for player movement
 let moveInput = 0;
@@ -2380,12 +2392,15 @@ if (keyboard_check(vk_left) || keyboard_check(65)) { // Left arrow or A
 }
 
 // Set the movement input on the platformer
-platformer.set_move_input(moveInput);
+this.platformer.set_move_input(moveInput);
 
 // Handle jump input
 const jumpPressed = keyboard_check_pressed(vk_space) 
 || keyboard_check_pressed(vk_up) || keyboard_check_pressed(87); // Space, Up arrow or W
-platformer.set_jump_input(jumpPressed);
+this.platformer.set_jump_input(jumpPressed);
+
+// Update platformer controller
+this.platformer.update();
 
 // Handle collisions with enemies
 const enemies = objEnemy.instances;
@@ -2393,9 +2408,9 @@ for (let i = 0; i < enemies.length; i++) {
     const enemy = enemies[i];
     if (this.check_collision(enemy) && !this.invincible) {
         // Check if we're landing on top of the enemy
-        if (this.yprevious < enemy.y - enemy.height/2 && physics.yspeed > 0) {
+        if (this.yprevious < enemy.y - enemy.height/2 && this.physics.vy > 0) {
             // Bounce off enemy
-            physics.yspeed = -8;
+            this.physics.vy = -8;
             
             // Kill enemy
             enemy.instance_destroy();
@@ -2412,7 +2427,10 @@ for (let i = 0; i < enemies.length; i++) {
 // Death condition - falling off the screen
 if (this.y > room_height + 100) {
     this.die();
-}`,
+}
+
+// Update facing from platformer component
+this.facing = this.platformer.facing;`,
 
         loop_begin: `// Decrease invincible timer if active
 if (this.invincible && this.invincible_time > 0) {
@@ -2491,19 +2509,17 @@ this.color = c_red;
 this.move_speed = 2;
 this.direction = 1; // 1 = right, -1 = left
 
-// Add physics module for gravity
-const physics = this.module_add(engine.create_physics_module());
-physics.friction = 0.1;
-physics.gravity = 0.5;
-physics.max_gravity_speed = 10;
-physics.has_collision = true;`,
+// Create physics component using our script
+this.physics = physics_create(this);
+this.physics.friction = 0.1;
+this.physics.gravity = 0.5;
+this.physics.max_gravity_speed = 10;`,
 
-        loop: `// Get physics module
-const physics = this.module_get('physics');
-if (!physics) return;
+loop: `// Update physics
+this.physics.update();
 
 // Move horizontally
-physics.xspeed = this.move_speed * this.direction;
+this.physics.vx = this.move_speed * this.direction;
 
 // Check for edge or wall and turn around
 const leftCheck = instance_position(this.x - 2, this.y + this.height + 5, objBlock);
@@ -2544,7 +2560,7 @@ gameObjects.push({
         awake: `// This object adds utility functions to other objects
 this.visible = false; // Don't draw this object`,
         
-        loop_begin: `// Add helper functions to player if they don't exist yet
+loop_begin: `// Add helper functions to player if they don't exist yet
 if (objPlayer.instances.length > 0) {
     const player = objPlayer.instances[0];
     
@@ -2557,10 +2573,9 @@ if (objPlayer.instances.length > 0) {
             this.y = 64;
             
             // Reset physics
-            const physics = this.module_get('physics');
-            if (physics) {
-                physics.xspeed = 0;
-                physics.yspeed = 0;
+            if (this.physics) {
+                this.physics.vx = 0;
+                this.physics.vy = 0;
             }
             
             // Set invincibility
@@ -2576,14 +2591,12 @@ if (objPlayer.instances.length > 0) {
                 this.invincible_time = 1.5;
                 
                 // Knock the player back
-                const physics = this.module_get('physics');
-                if (physics) {
-                    physics.yspeed = -6;
+                if (this.physics) {
+                    this.physics.vy = -6;
                     
                     // Knock in opposite direction of movement
-                    const platformer = this.module_get('platformer');
-                    if (platformer) {
-                        physics.xspeed = -platformer.facing * 8;
+                    if (this.platformer) {
+                        this.physics.vx = -this.platformer.facing * 8;
                     }
                 }
             }

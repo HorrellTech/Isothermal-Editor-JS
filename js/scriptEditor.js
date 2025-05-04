@@ -325,6 +325,345 @@ function util_lerp(a, b, t) {
     return a + (b - a) * util_clamp(t, 0, 1);
 }
 `);
+
+// Add Physics system script
+addScript('PhysicsSystem', `/**
+* Physics System
+* A basic physics system for 2D games
+*/
+
+/**
+* Create a physics component for an object
+* 
+* @param {Object} obj - The game object to attach physics to
+* @returns {Object} - The physics component
+*/
+function physics_create(obj) {
+    // Create the physics component
+    const physics = {
+        obj: obj,
+        
+        // Physics properties
+        vx: 0,                   // Horizontal velocity
+        vy: 0,                   // Vertical velocity
+        speed: 0,                // Speed magnitude
+        direction: 0,            // Direction in degrees
+        max_speed: 5,            // Maximum speed limit
+        acceleration: 0.2,       // How fast the object gains speed
+        deceleration: 0.2,       // How fast the object loses speed
+        friction: 0.1,           // Friction coefficient
+        mass: 1,                 // Object mass for physics calculations
+        gravity: 0,              // Gravity strength
+        max_gravity_speed: 6,    // Maximum gravity-induced speed
+        gravity_direction: 270,  // Direction gravity pulls (270 = down)
+        gravity_factor: 0.4,     // Gravitational constant
+        
+        // Update physics
+        update: function() {
+            const dt = Math.min(engine.dt || 0.016, 0.1);
+            
+            // Apply friction
+            this.updateFriction();
+            
+            if (this.gravity > 0) {
+                this.apply_force_direction(this.gravity, this.gravity_direction);
+            }
+            
+            // Update position
+            this.obj.x += this.vx * dt;
+            this.obj.y += this.vy * dt;
+            
+            // Cap velocity if at max speed
+            if (Math.abs(this.vx) > this.max_speed) {
+                this.vx = Math.sign(this.vx) * this.max_speed;
+            }
+            if (Math.abs(this.vy) > this.max_gravity_speed) {
+                this.vy = Math.sign(this.vy) * this.max_gravity_speed;
+            }
+        },
+        
+        updateFriction: function() {
+            const dt = Math.min(engine.dt || 0.016, 0.1);
+            this.vx -= this.vx * (this.friction) * dt;
+            this.vy -= this.vy * (this.friction) * dt;
+            this.speed -= this.speed * (this.friction) * dt;
+        },
+        
+        apply_force: function(forceX, forceY) {
+            const dt = Math.min(engine.dt || 0.016, 0.1);
+            
+            // F = ma (Newton's second law)
+            const accelerationX = forceX / this.mass;
+            const accelerationY = forceY / this.mass;
+            
+            this.vx += accelerationX * dt;
+            this.vy += accelerationY * dt;
+            
+            return this;
+        },
+        
+        apply_force_direction: function(force, direction) {
+            const dx = engine.lengthdir_x(force, direction);
+            const dy = engine.lengthdir_y(force, direction);
+            
+            return this.apply_force(dx, dy);
+        },
+        
+        stop: function() {
+            this.vx = 0;
+            this.vy = 0;
+            this.speed = 0;
+            return this;
+        },
+        
+        // Check collision with another object
+        check_collision: function(other) {
+            return this.obj.check_collision(other);
+        }
+    };
+    
+    return physics;
+}
+`);
+   
+   // Add platformer controller script
+   addScript('PlatformerController', `/**
+* Platformer Controller
+* A controller for 2D platformer games
+*/
+
+/**
+* Create a platformer controller for an object
+* 
+* @param {Object} obj - The game object to control
+* @param {Object} physics - The physics component for the object
+* @returns {Object} - The platformer controller component
+*/
+function platformer_create(obj, physics) {
+    if (!physics) {
+        console.error("Platformer controller requires physics component");
+        return null;
+    }
+    
+    const controller = {
+        obj: obj,
+        physics: physics,
+        
+        // Movement properties
+        max_speed: 5,              // Maximum horizontal speed
+        acceleration: 0.5,         // Horizontal acceleration
+        deceleration: 0.6,         // Horizontal deceleration when stopping
+        ground_friction: 0.2,      // Friction when on ground
+        air_friction: 0.05,        // Friction when in air
+        
+        // Jumping properties
+        jump_force: 10,            // Initial jump velocity
+        jump_hold_time: 0.25,      // How long jump button can be held for higher jumps
+        jump_timer: 0,             // Current jump timer
+        jump_buffer_time: 0.15,    // Time to buffer a jump input before landing
+        jump_buffer_timer: 0,      // Current jump buffer timer
+        coyote_time: 0.1,          // Time player can still jump after leaving platform
+        coyote_timer: 0,           // Current coyote time timer
+        max_jumps: 1,              // Maximum number of jumps (2 for double jump)
+        jumps_left: 1,             // Current jumps remaining
+        variable_jump: true,       // Whether to allow variable height jumps
+        
+        // Ground detection
+        on_ground: false,          // Whether player is on ground
+        was_on_ground: false,      // Whether player was on ground last frame
+        ground_check_dist: 5,      // Distance to check for ground below
+        
+        // State flags
+        is_jumping: false,         // Whether player is jumping
+        is_falling: false,         // Whether player is falling
+        facing: 1,                 // 1 = right, -1 = left
+        
+        // Input tracking
+        move_input: 0,             // Current movement input (-1 to 1)
+        jump_input: false,         // Current jump input
+        jump_released: true,       // Whether jump button was released
+        
+        // Initialize
+        init: function() {
+            this.jumps_left = this.max_jumps;
+            return this;
+        },
+        
+        // Update controller logic
+        update: function() {
+            // Store previous ground state
+            this.was_on_ground = this.on_ground;
+            
+            // Check if on ground
+            this.check_ground();
+            
+            // Reset jumps when landing
+            if (this.on_ground && !this.was_on_ground) {
+                this.jumps_left = this.max_jumps;
+                this.is_jumping = false;
+                this.is_falling = false;
+            }
+            
+            // Apply coyote time
+            if (this.was_on_ground && !this.on_ground) {
+                this.coyote_timer = this.coyote_time;
+            } else if (!this.on_ground) {
+                this.coyote_timer -= engine.dt;
+            }
+            
+            // Update jump buffer timer
+            if (this.jump_buffer_timer > 0) {
+                this.jump_buffer_timer -= engine.dt;
+            }
+            
+            // Update jump timer
+            if (this.jump_timer > 0) {
+                this.jump_timer -= engine.dt;
+            }
+            
+            // Determine if falling
+            this.is_falling = this.physics.vy > 0 && !this.on_ground;
+            
+            // Apply appropriate friction
+            const friction = this.on_ground ? this.ground_friction : this.air_friction;
+            this.physics.vx *= (1 - friction);
+            
+            // Apply horizontal movement
+            this.apply_movement();
+            
+            // Process jump input
+            this.process_jump();
+            
+            // Update facing direction based on movement
+            if (this.move_input > 0.1) {
+                this.facing = 1;
+            } else if (this.move_input < -0.1) {
+                this.facing = -1;
+            }
+        },
+        
+        // Check if player is on ground
+        check_ground: function() {
+            // Simple ground check based on position
+            if (this.obj.y + this.obj.height >= engine.room_height - this.ground_check_dist) {
+                this.on_ground = true;
+                // Snap to ground
+                this.obj.y = engine.room_height - this.obj.height;
+                return true;
+            }
+            
+            // Advanced check would use collision with platforms
+            // Look for platform objects below the player
+            const platforms = objBlock ? objBlock.instances : [];
+            for (let i = 0; i < platforms.length; i++) {
+                const platform = platforms[i];
+                if (this.physics.vy >= 0 && // Only check when moving down
+                    this.obj.x + this.obj.width > platform.x &&
+                    this.obj.x < platform.x + platform.width &&
+                    this.obj.yprevious + this.obj.height <= platform.y &&
+                    this.obj.y + this.obj.height >= platform.y) {
+                    
+                    this.on_ground = true;
+                    this.obj.y = platform.y - this.obj.height;
+                    this.physics.vy = 0;
+                    return true;
+                }
+            }
+            
+            this.on_ground = false;
+            return false;
+        },
+        
+        // Apply horizontal movement
+        apply_movement: function() {
+            // Apply normal movement
+            if (Math.abs(this.move_input) > 0.1) {
+                // Accelerate in input direction
+                this.physics.vx += this.move_input * this.acceleration;
+            } else if (Math.abs(this.physics.vx) > 0.1) {
+                // Decelerate when no input
+                const dir = Math.sign(this.physics.vx);
+                this.physics.vx -= dir * this.deceleration;
+                // Prevent changing direction when decelerating
+                if (Math.sign(this.physics.vx) !== dir) {
+                    this.physics.vx = 0;
+                }
+            } else {
+                this.physics.vx = 0;
+            }
+            
+            // Cap horizontal speed
+            this.physics.vx = Math.max(-this.max_speed, Math.min(this.max_speed, this.physics.vx));
+        },
+        
+        // Process jump input
+        process_jump: function() {
+            // Jump case 1: Initial jump with jump buffer
+            if ((this.on_ground || this.coyote_timer > 0) && 
+                (this.jump_input || this.jump_buffer_timer > 0) && 
+                this.jumps_left > 0) {
+                
+                // Perform jump
+                this.do_jump();
+                
+                // Reset buffer
+                this.jump_buffer_timer = 0;
+                this.coyote_timer = 0;
+            }
+            // Jump case 2: Double jump (air jump)
+            else if (!this.on_ground && this.jump_input && this.jumps_left > 0 && this.max_jumps > 1 && this.jump_released) {
+                this.do_jump();
+            }
+            
+            // Variable jump height
+            if (this.is_jumping && !this.jump_input && this.variable_jump) {
+                if (this.physics.vy < 0) {
+                    // Reduce upward velocity when button released
+                    this.physics.vy *= 0.5;
+                }
+                this.is_jumping = false;
+            }
+            
+            // Update jump released state
+            if (!this.jump_input) {
+                this.jump_released = true;
+            }
+        },
+        
+        // Perform a normal jump
+        do_jump: function() {
+            // Apply jump velocity
+            this.physics.vy = -this.jump_force;
+            
+            // Set state flags
+            this.is_jumping = true;
+            this.is_falling = false;
+            this.jump_timer = this.jump_hold_time;
+            this.jumps_left--;
+            this.jump_released = false;
+        },
+        
+        // Set horizontal movement input (-1 to 1)
+        set_move_input: function(value) {
+            this.move_input = Math.max(-1, Math.min(1, value));
+            return this;
+        },
+        
+        // Set jump input state
+        set_jump_input: function(pressed) {
+            // If jump was just pressed
+            if (pressed && !this.jump_input) {
+                this.jump_buffer_timer = this.jump_buffer_time;
+            }
+            
+            this.jump_input = pressed;
+            return this;
+        }
+    };
+    
+    return controller.init();
+}
+`);
     }
     
     /**
